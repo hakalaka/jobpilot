@@ -24,13 +24,14 @@ def main() -> int:
     stamp = datetime.now(timezone.utc)
     jobs, failures = [], 0
     for board in cfg.get("boards", []):
+        print(f"{board['company']:<28} fetching...", flush=True)
         for attempt in (1, 2):
             try:
                 got = ats.fetch_and_parse(board, cfg.get("title_keywords"), cfg.get("locations"))
                 for j in got:
                     j["snapshot_date"] = stamp.date().isoformat()
                 jobs += got
-                print(f"{board['company']:<28} {len(got):>4}")
+                print(f"{board['company']:<28} {len(got):>4}", flush=True)
                 break
             except Exception as e:  # noqa: BLE001
                 if attempt == 2:

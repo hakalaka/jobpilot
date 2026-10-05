@@ -31,7 +31,8 @@ boards:
   search_texts: [databricks]
   facets:
     locationCountry: [c4f78be1a8f14da0ab49ce1162348a5e]   # India
-  max_jobs: 300
+  max_pages: 15     # list pages (20 each); relevance-sorted, so the first pages matter most
+  max_jobs: 150     # detail calls (one per job)
 - source: greenhouse
   token: databricks
   company: Databricks

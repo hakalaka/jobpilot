@@ -143,19 +143,23 @@ def fetch_workday(board: dict, title_keywords, locations, pause: float = 0.5, ge
     get = get or _http_json
     base, wanted = workday_base(board), []
     max_jobs = int(board.get("max_jobs", 300))
+    max_pages = int(board.get("max_pages", 15))   # results are relevance-sorted: early pages matter most
+    name = board["company"]
     search_texts = board.get("search_texts") or [""]
     seen = set()
     for search in search_texts:
-        offset, total = 0, None
-        while total is None or offset < min(total, WORKDAY_TOTAL_CAP):
+        offset, total, pages = 0, None, 0
+        while (total is None or offset < min(total, WORKDAY_TOTAL_CAP)) and pages < max_pages:
             body = {"appliedFacets": board.get("facets", {}), "limit": WORKDAY_PAGE,
                     "offset": offset, "searchText": search}
             page = get(f"{base}/jobs", body)
+            pages += 1
             if total is None:
                 total = int(page.get("total", 0))
+                print(f"  {name} '{search}': {total} results on the server", flush=True)
                 if total >= WORKDAY_TOTAL_CAP:
-                    print(f"WARNING {board['company']} '{search}': {total} results is Workday's cap; "
-                          "jobs beyond it are not returned. Tighten facets or search_texts.")
+                    print(f"  WARNING {name} '{search}': {total} results is Workday's cap; "
+                          "jobs beyond it are not returned. Tighten facets or search_texts.", flush=True)
             postings = page.get("jobPostings") or []
             if not postings:
                 break
@@ -169,11 +173,15 @@ def fetch_workday(board: dict, title_keywords, locations, pause: float = 0.5, ge
             if len(wanted) >= max_jobs:
                 break
             time.sleep(pause)
+    wanted = wanted[:max_jobs]
+    print(f"  {name}: {len(wanted)} matching titles in {pages} list page(s); fetching details", flush=True)
     records = []
-    for path in wanted[:max_jobs]:
+    for i, path in enumerate(wanted, 1):
         rec = parse_workday_detail(get(f"{base}{path}", None), board)
         if matches_filters(rec, title_keywords, locations):
             records.append(rec)
+        if i % 25 == 0:
+            print(f"  {name}: {i}/{len(wanted)} details", flush=True)
         time.sleep(pause)
     return records
 
