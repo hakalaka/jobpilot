@@ -78,8 +78,16 @@ def run(w: WorkspaceClient, warehouse_id: str, sql: str) -> list:
     return [dict(zip(cols, row)) for row in rows]
 
 
+def client() -> WorkspaceClient:
+    """Accept a host pasted with a path or ?o= (e.g. copied from the browser) by keeping scheme://host."""
+    from urllib.parse import urlparse
+    u = urlparse(os.environ["DATABRICKS_HOST"].strip())
+    return WorkspaceClient(host=f"{u.scheme or 'https'}://{u.netloc or u.path.split('/')[0]}",
+                           token=os.environ["DATABRICKS_TOKEN"].strip())
+
+
 def main() -> int:
-    w = WorkspaceClient()
+    w = client()
     wh = next((x for x in w.warehouses.list() if x.name == WAREHOUSE_NAME), None)
     if wh is None:
         print(f"::error::warehouse '{WAREHOUSE_NAME}' not found")
