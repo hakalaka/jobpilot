@@ -52,7 +52,9 @@ def main():
         verified.append({"source": source, "token": c["token"], "company": c["company"]})
         rows.append((c["company"], c["token"], source, len(recs), len(kept), ""))
 
-    cfg["boards"] = verified
+    # Workday and other manually configured boards aren't probed: keep them as they are
+    manual = [b for b in cfg.get("boards", []) if b.get("source") not in ("greenhouse", "lever")]
+    cfg["boards"] = verified + manual
     header = ("# Written by tools/discover_boards.py (discover-boards workflow). Edit filters freely;\n"
               "# edit config/board_candidates.yaml to add companies, then re-run discovery.\n")
     cfg_path.write_text(header + yaml.safe_dump(cfg, sort_keys=False, allow_unicode=True))

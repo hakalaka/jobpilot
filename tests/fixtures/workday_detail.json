@@ -1,0 +1,46 @@
+{
+ "jobPostingInfo": {
+  "id": "c6d2dc0111521004248ce03a63d90000",
+  "title": "Data Engineer",
+  "jobDescription": "<b>Project Role : </b>Data Engineer<br><b>Project Role Description : </b>Design, develop and maintain data solutions for data generation, collection, and processing. Create data pipelines, ensure data quality, and implement ETL (extract, transform and load) processes to migrate and deploy data across systems.                                                                                                                                                                                                                                                                                                <br><b>Must have skills : </b>Data Engineering<br><b>Good to have skills : </b>NA<br>Minimum <b>5</b> year(s) of experience is required<br><b>Educational Qualification : </b>15 years full time education<br><br>Summary: <br>As a Data Engineer, a typical day involves designing, developing, and maintaining comprehensive data solutions that support the generation, collection, and processing of data. This role requires creating efficient data pipelines and ensuring the integrity and quality of data throughout its lifecycle. The Data Engineer is responsible for implementing processes that extract, transform, and load data to facilitate seamless migration and deployment across various systems, enabling smooth data flow and accessibility for multiple teams and applications.<br> <br>Roles & Responsibilities: <br>- Expected to be an SME, collaborate and manage the team to perform.<br>- Responsible for team decisions.<br>- Engage with multiple teams and contribute on key decisions.<br>- Provide solutions to problems for their immediate team and across multiple teams.<br>- Lead the design and implementation of scalable data architectures to support evolving business needs.<br>- Mentor junior team members to enhance their technical skills and understanding of data engineering best practices.<br>- Coordinate with stakeholders to align data strategies with organizational goals and ensure timely delivery of data projects.<br> <br>Professional & Technical Skills: <br>- Must To Have Skills: Proficiency in Data Engineering.<br>- Strong knowledge of data pipeline development and management.<br>- Experience with data integration and ETL tools and techniques.<br>- Familiarity with cloud-based data platforms and storage solutions.<br>- Ability to optimize data workflows for performance and scalability.<br>- Understanding of data quality assurance and monitoring practices.<br> <br>Additional Information: <br>- The candidate should have minimum 5 years of experience in Data Engineering.<br>- This position is based at our BDC11 - SEZ office.<br>- A 15 years full time education is required.<br> <br><p style=\"text-align:inherit\"></p><p style=\"text-align:inherit\"></p><p style=\"text-align:inherit\"></p>15 years full time education<p style=\"text-align:inherit\"></p><p style=\"text-align:inherit\"></p><p style=\"text-align:inherit\"></p><p><b><u>About Accenture</u></b></p>Accenture is a leading global professional services company that helps the world\u2019s leading businesses, governments and other organizations build their digital core, optimize their operations, accelerate revenue growth and enhance citizen services\u2014creating tangible value at speed and scale. We are a talent- and innovation-led company with approximately 791,000 people serving clients in more than 120 countries. Technology is at the core of change today, and we are one of the world\u2019s leaders in helping drive that change, with strong ecosystem relationships. We combine our strength in technology and leadership in cloud, data and AI with unmatched industry experience, functional expertise and global delivery capability. Our broad range of services, solutions and assets across Strategy &amp; Consulting, Technology, Operations, Industry X and Song, together with our culture of shared success and commitment to creating 360\u00b0 value, enable us to help our clients reinvent and build trusted, lasting relationships. We measure our success by the 360\u00b0 value we create for our clients, each other, our shareholders, partners and communities.<p><span>Visit us at</span><span>\u00a0</span><a href=\"http://www.accenture.com/\" target=\"_blank\">www.accenture.com</a><span>\u00a0</span></p><p style=\"text-align:inherit\"></p><p style=\"text-align:inherit\"></p><p><b>Equal Employment Opportunity Statement </b></p><p><br /><span style=\"color:#000000\"><span><span style=\"font-size:14px\">We believe that no one should be discriminated against because of their differences.\u202fAll employment decisions shall be made without regard to age, race, creed, color, religion, sex, national origin, ancestry, disability status, military</span></span></span><span style=\"color:#ff0000\"><span><span style=\"font-size:14px\"> </span></span></span><span style=\"color:#000000\"><span><span style=\"font-size:14px\">veteran status, sexual orientation, gender identity or expression, genetic information, marital status, citizenship status or any other basis as protected by applicable</span></span></span><span style=\"color:#ff0000\"><span><span style=\"font-size:14px\"> </span></span></span><span style=\"color:#000000\"><span><span style=\"font-size:14px\">law.\u202fOur rich diversity makes us more innovative, more competitive, and more creative, which helps us better serve our clients and our communities.</span></span></span></p>",
+  "location": "Bengaluru",
+  "postedOn": "Posted 19 Days Ago",
+  "startDate": "2026-09-16",
+  "timeType": "Full time",
+  "jobReqId": "ATCI-5402250-S2026701",
+  "jobPostingId": "Data-Engineer_ATCI-5402250-S2026701-1",
+  "jobPostingSiteId": "AccentureCareers",
+  "country": {
+   "descriptor": "India",
+   "id": "c4f78be1a8f14da0ab49ce1162348a5e"
+  },
+  "canApply": true,
+  "posted": true,
+  "includeResumeParsing": true,
+  "jobRequisitionLocation": {
+   "descriptor": "Bengaluru, BDC11A",
+   "country": {
+    "descriptor": "India",
+    "id": "c4f78be1a8f14da0ab49ce1162348a5e",
+    "alpha2Code": "IN"
+   }
+  },
+  "externalUrl": "https://accenture.wd103.myworkdayjobs.com/AccentureCareers/job/Bengaluru/Data-Engineer_ATCI-5402250-S2026701-1",
+  "questionnaireId": "96dcdb4585540191414ad7e3d000b9b9"
+ },
+ "hiringOrganization": {
+  "name": "8113 ASOL- Bangalore 7 SEZ Company",
+  "url": ""
+ },
+ "similarJobs": [
+  {
+   "title": "Data Engineer",
+   "externalPath": "/job/Bengaluru/Data-Engineer_ATCI-5540228-S2023588-1",
+   "timeType": "Full time",
+   "locationsText": "Bengaluru",
+   "postedOn": "Posted 13 Days Ago",
+   "startDate": "2026-09-22"
+  }
+ ],
+ "userAuthenticated": false
+}
