@@ -9,6 +9,7 @@ Refuses to publish if the latest quality gate has a failed blocking check.
 import json
 import os
 import sys
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -65,6 +66,10 @@ QUERIES = {
 
 def run(w: WorkspaceClient, warehouse_id: str, sql: str) -> list:
     r = w.statement_execution.execute_statement(statement=sql, warehouse_id=warehouse_id, wait_timeout="50s")
+    deadline = time.time() + 600                      # a cold serverless warehouse can take a few minutes
+    while r.status.state.value in ("PENDING", "RUNNING") and time.time() < deadline:
+        time.sleep(5)
+        r = w.statement_execution.get_statement(r.statement_id)
     state = r.status.state.value if r.status and r.status.state else "UNKNOWN"
     if state != "SUCCEEDED":
         raise RuntimeError(f"query failed ({state}): {r.status.error.message if r.status.error else ''}")
@@ -77,12 +82,12 @@ def main() -> int:
     w = WorkspaceClient()
     wh = next((x for x in w.warehouses.list() if x.name == WAREHOUSE_NAME), None)
     if wh is None:
-        print(f"warehouse '{WAREHOUSE_NAME}' not found")
+        print(f"::error::warehouse '{WAREHOUSE_NAME}' not found")
         return 1
     data = {name: run(w, wh.id, q) for name, q in QUERIES.items()}
     failed = int(data["quality"][0]["failed_blocking"] or 0) if data["quality"] else 0
     if failed:
-        print(f"Not publishing: {failed} blocking quality check(s) failed in the latest run.")
+        print(f"::error::Not publishing: {failed} blocking quality check(s) failed in the latest run.")
         return 2
     data["generated_at"] = datetime.now(timezone.utc).isoformat(timespec="minutes")
     out = ROOT / "site" / "data.json"
@@ -92,4 +97,8 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    try:
+        sys.exit(main())
+    except Exception as e:  # show the reason in the GitHub UI
+        print(f"::error title=Snapshot export failed::{type(e).__name__}: {str(e)[:800]}")
+        raise
