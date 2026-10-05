@@ -3,6 +3,14 @@
 The dashboard is reviewed and versioned like any other code. Edit this file, run it, commit the JSON;
 CI deploys it with the bundle. Layout grid is 6 columns wide.
 
+Where numbers come from:
+- Every METRIC (counts, rates, averages, trends) reads a Unity Catalog metric view directly
+  ("asset_name" datasets) and asks for MEASURE(`name`). The metric view does the maths at whatever
+  grouping and filters the widget applies, so the dashboard, Genie and the public page always agree.
+- LISTS (the best-roles table, top-N skill rankings) read row-level SQL datasets, because a "top 20"
+  chart needs a ranked list. They count the same way as the matching measure (distinct postings).
+- tests/test_artifacts.py checks every MEASURE() and dimension used here exists in a metric view.
+
     python tools/build_dashboard.py
 """
 import json
@@ -14,16 +22,16 @@ BLUE, ORANGE, AQUA = "#2a78d6", "#eb6834", "#1baf7a"   # validated categorical s
 STATUS_COLORS = [{"value": "Have it", "color": BLUE}, {"value": "Learning", "color": ORANGE},
                  {"value": "Gap", "color": AQUA}]
 
+# Metric views used as-is. Measures are defined once, in notebooks/30_semantic_layer.py.
+METRIC_VIEWS = [
+    ("mv_market", "Market metrics (metric view)", f"{T}.mv_job_market"),
+    ("mv_daily", "Market over time (metric view)", f"{T}.mv_market_daily"),
+]
+
+# Row-level SQL datasets, for lists and rankings only.
 DATASETS = [
     ("ds_market", "Job market (one row per posting)", f"""
-        SELECT *,
-               -- NULL (not 0) for postings the LLM hasn't scored yet, so AVG ignores them:
-               -- same definition as strong_fit_rate in mv_job_market (enriched postings only).
-               CASE WHEN NOT is_enriched THEN NULL WHEN recommendation = 'APPLY' THEN 1.0 ELSE 0.0 END AS is_strong_fit
-        FROM {T}.v_job_market"""),
-    ("ds_daily", "Open postings per day", f"""
-        SELECT d.snapshot_day, d.company, d.open_postings, d.new_postings
-        FROM {T}.gold_postings_daily d"""),
+        SELECT * FROM {T}.v_job_market"""),
     ("ds_skills", "Top 20 required skills in open postings", f"""
         WITH s AS (
           SELECT d.job_key, d.skill, m.city, m.domain,
@@ -78,14 +86,19 @@ def _query(ds, fields, disaggregated=False, filters=None):
     return [{"name": "main_query", "query": q}]
 
 
-def counter(title, ds, name, expr, x, y, fmt=None, filters=None):
+def measure(name):
+    """Field expression for a metric-view measure, e.g. MEASURE(`open_postings`)."""
+    return f"MEASURE(`{name}`)"
+
+
+def counter(title, ds, name, expr, x, y, fmt=None, filters=None, w=1):
     value = {"fieldName": name, "displayName": title}
     if fmt:
         value["format"] = fmt
     return {"widget": {"name": _name("kpi"), "queries": _query(ds, [(name, expr)], filters=filters),
                        "spec": {"version": 2, "widgetType": "counter", "encodings": {"value": value},
                                 "frame": {"showTitle": True, "title": title}}},
-            "position": {"x": x, "y": y, "width": 1, "height": 2}}
+            "position": {"x": x, "y": y, "width": w, "height": 2}}
 
 
 def bar(title, ds, cat, cat_expr, val, val_expr, x, y, w, h, horizontal=True, color=None, filters=None,
@@ -105,8 +118,8 @@ def bar(title, ds, cat, cat_expr, val, val_expr, x, y, w, h, horizontal=True, co
             "position": {"x": x, "y": y, "width": w, "height": h}}
 
 
-def line(title, ds, xname, xexpr, yname, yexpr, x, y, w, h, ylabel):
-    return {"widget": {"name": _name("line"), "queries": _query(ds, [(xname, xexpr), (yname, yexpr)]),
+def line(title, ds, xname, xexpr, yname, yexpr, x, y, w, h, ylabel, filters=None):
+    return {"widget": {"name": _name("line"), "queries": _query(ds, [(xname, xexpr), (yname, yexpr)], filters=filters),
                        "spec": {"version": 3, "widgetType": "line",
                                 "encodings": {"x": {"fieldName": xname, "displayName": "Day", "scale": {"type": "temporal"}},
                                               "y": {"fieldName": yname, "displayName": ylabel,
@@ -139,49 +152,59 @@ def multi_filter(title, field, datasets, x, y):
 
 
 OPEN = ["`is_open`"]
+SCORED = ["`is_enriched`"]   # fit figures only make sense for postings the LLM has read
 pct = {"type": "number-percent", "decimalPlaces": {"type": "max", "places": 0}}
+ALL_MARKET = ["mv_market", "ds_market", "ds_skills", "ds_gaps", "ds_skill_flags"]   # datasets the filters apply to
 
 overview = [
     text(["# India data-engineering job market"], 0, 0, 6, 1),
     text(["Live from company career boards, refreshed daily by a Lakeflow pipeline. "
-          "Requirements extracted with `ai_query`; fit scored against my profile."], 0, 1, 6, 1),
-    multi_filter("City", "city", ["ds_market", "ds_skills", "ds_gaps", "ds_skill_flags"], 0, 2),
-    multi_filter("Domain", "domain", ["ds_market", "ds_skills", "ds_gaps", "ds_skill_flags"], 2, 2),
-    counter("Open postings", "ds_market", "open_postings", "COUNT(DISTINCT `job_key`)", 0, 3, filters=OPEN),
-    counter("Hiring companies", "ds_market", "companies", "COUNT(DISTINCT `company`)", 1, 3, filters=OPEN),
-    counter("Median years asked", "ds_market", "median_years", "MEDIAN(`years_required`)", 2, 3, filters=OPEN),
-    counter("Strong-fit share", "ds_market", "strong_fit_share", "AVG(`is_strong_fit`)", 3, 3, fmt=pct, filters=OPEN),
+          "Requirements extracted with `ai_query`; fit scored against my profile. "
+          "Every number comes from a Unity Catalog metric view, the same one Genie uses."], 0, 1, 6, 1),
+    multi_filter("City", "city", ALL_MARKET, 0, 2),
+    multi_filter("Domain", "domain", ALL_MARKET, 2, 2),
+    # Headline numbers: one MEASURE() each, computed by the metric view for the filters chosen above.
+    counter("Open postings", "mv_market", "open_postings", measure("open_postings"), 0, 3, filters=OPEN),
+    counter("Hiring companies", "mv_market", "companies", measure("companies"), 1, 3, filters=OPEN),
+    counter("Median years asked", "mv_market", "median_years", measure("median_years_required"), 2, 3, filters=OPEN),
+    counter("Strong-fit rate", "mv_market", "strong_fit_rate", measure("strong_fit_rate"), 3, 3, fmt=pct, filters=OPEN),
     counter("Share asking for Databricks", "ds_skill_flags", "databricks_share", "AVG(`wants_databricks`)", 4, 3, fmt=pct),
     counter("Share asking for GenAI", "ds_skill_flags", "genai_share", "AVG(`wants_genai`)", 5, 3, fmt=pct),
-    line("Open postings per day", "ds_daily", "snapshot_day", "`snapshot_day`", "open", "SUM(`open_postings`)",
-         0, 5, 3, 4, "Open postings"),
-    bar("Open postings by city", "ds_market", "city", "`city`", "postings", "COUNT(DISTINCT `job_key`)",
-        3, 5, 3, 4, filters=OPEN, cat_label="City", val_label="Open postings"),
+    # Read-me-first context for the numbers above: how much is one employer, how much has the LLM read.
+    counter("Share from the largest company", "mv_market", "largest_company_share", measure("largest_company_share"),
+            0, 5, fmt=pct, filters=OPEN, w=3),
+    counter("Postings analysed by the LLM", "mv_market", "enrichment_coverage", measure("enrichment_coverage"),
+            3, 5, fmt=pct, filters=OPEN, w=3),
+    line("Open postings per day", "mv_daily", "day", "`day`", "open", measure("avg_open_postings"),
+         0, 7, 3, 4, "Open postings"),
+    bar("Open postings by city", "mv_market", "city", "`city`", "postings", measure("open_postings"),
+        3, 7, 3, 4, filters=OPEN, cat_label="City", val_label="Open postings"),
     bar("Top skills in open postings (colour = do I have it?)", "ds_skills", "skill", "`skill`",
-        "postings", "COUNT(DISTINCT `job_key`)", 0, 9, 4, 7, color="skill_status",
+        "postings", "COUNT(DISTINCT `job_key`)", 0, 11, 4, 7, color="skill_status",
         cat_label="Skill", val_label="Postings requiring it"),
-    bar("Open postings by domain", "ds_market", "domain", "`domain`", "postings", "COUNT(DISTINCT `job_key`)",
-        4, 9, 2, 7, filters=OPEN, cat_label="Domain", val_label="Open postings"),
+    bar("Open postings by domain", "mv_market", "domain", "`domain`", "postings", measure("open_postings"),
+        4, 11, 2, 7, filters=OPEN + SCORED, cat_label="Domain", val_label="Open postings"),
     table("Best-matching open roles", "ds_market",
           [("company", "Company"), ("title", "Role"), ("city", "City"), ("fit_score", "Fit (0-100)"),
            ("recommendation", "Fit band"), ("years_required", "Years asked"), ("url", "Link")],
-          0, 16, 6, 6, filters=OPEN + ["`recommendation` <> 'SKIP'"]),
+          0, 18, 6, 6, filters=OPEN + ["`recommendation` <> 'SKIP'"]),
 ]
 
 fit_page = [
     text(["# My fit and skill gaps"], 0, 0, 6, 1),
     text(["Deterministic fit score per posting: must-have coverage 55%, nice-to-have 15%, years 15%, "
-          "location 10%, domain 5%. Gaps on my learning list are what I'm studying next."], 0, 1, 6, 1),
-    bar("Open postings by fit band", "ds_market", "recommendation", "`recommendation`", "postings",
-        "COUNT(DISTINCT `job_key`)", 0, 2, 2, 5, horizontal=False, filters=OPEN,
+          "location 10%, domain 5%. Gaps on my learning list are what I'm studying next. "
+          "Only postings the LLM has analysed have a fit score."], 0, 1, 6, 1),
+    bar("Open postings by fit band", "mv_market", "recommendation", "`recommendation`", "postings",
+        measure("open_postings"), 0, 2, 2, 5, horizontal=False, filters=OPEN + SCORED,
         cat_label="Fit band", val_label="Open postings"),
     bar("Most common gaps (required skills I don't list)", "ds_gaps", "skill", "`skill`", "postings",
         "COUNT(DISTINCT `job_key`)", 2, 2, 4, 5, color="skill_status",
         cat_label="Skill", val_label="Postings requiring it"),
-    bar("Average fit by domain", "ds_market", "domain", "`domain`", "avg_fit", "AVG(`fit_score`)",
-        0, 7, 3, 5, filters=OPEN, cat_label="Domain", val_label="Average fit score"),
-    bar("Average fit by seniority", "ds_market", "seniority", "`seniority`", "avg_fit", "AVG(`fit_score`)",
-        3, 7, 3, 5, filters=OPEN, cat_label="Seniority", val_label="Average fit score"),
+    bar("Average fit by domain", "mv_market", "domain", "`domain`", "avg_fit", measure("avg_fit_score"),
+        0, 7, 3, 5, filters=OPEN + SCORED, cat_label="Domain", val_label="Average fit score"),
+    bar("Average fit by seniority", "mv_market", "seniority", "`seniority`", "avg_fit", measure("avg_fit_score"),
+        3, 7, 3, 5, filters=OPEN + SCORED, cat_label="Seniority", val_label="Average fit score"),
 ]
 
 health_page = [
@@ -196,7 +219,8 @@ health_page = [
 ]
 
 dashboard = {
-    "datasets": [{"name": n, "displayName": d, "queryLines": [q.strip()]} for n, d, q in DATASETS],
+    "datasets": ([{"name": n, "displayName": d, "asset_name": a} for n, d, a in METRIC_VIEWS]
+                 + [{"name": n, "displayName": d, "queryLines": [q.strip()]} for n, d, q in DATASETS]),
     "pages": [
         {"name": "market", "displayName": "Market overview", "layout": overview, "pageType": "PAGE_TYPE_CANVAS"},
         {"name": "fit", "displayName": "My fit and gaps", "layout": fit_page, "pageType": "PAGE_TYPE_CANVAS"},
