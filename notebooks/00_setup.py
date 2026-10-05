@@ -38,8 +38,12 @@ ddl = {
         years_min DOUBLE COMMENT 'Minimum years of experience asked; null if not stated',
         must_have_skills ARRAY<STRING>, nice_to_have_skills ARRAY<STRING>, cloud ARRAY<STRING>,
         domain STRING COMMENT 'Industry of the role, e.g. healthcare, fintech, consulting',
-        summary STRING, llm_model STRING, extracted_at TIMESTAMP""",
-    "silver_extract_errors": "job_key STRING, error STRING, failed_at TIMESTAMP",
+        summary STRING, llm_model STRING, extracted_at TIMESTAMP,
+        text_hash STRING COMMENT 'SHA-256 of the job text that was sent to the model',
+        prompt_version STRING COMMENT 'EXTRACTION_VERSION of the prompt and schema used'""",
+    "silver_extract_errors": """
+        job_key STRING, error STRING, failed_at TIMESTAMP,
+        text_hash STRING, prompt_version STRING, llm_model STRING""",
     "gold_job_fit": """
         job_key STRING NOT NULL,
         fit_score DOUBLE COMMENT 'Match between the posting and the master profile, 0-100',
@@ -61,6 +65,19 @@ ddl = {
 for table, cols in ddl.items():
     spark.sql(f"CREATE TABLE IF NOT EXISTS {T}.{table} ({cols})")
 spark.sql(f"ALTER TABLE {T}.applications SET TBLPROPERTIES (delta.enableChangeDataFeed = true)")
+
+# CREATE TABLE IF NOT EXISTS never changes a table that already exists. So when a release adds
+# columns, existing tables get them here instead. Safe to run every day: it only adds what's missing.
+new_columns = {
+    "silver_job_requirements": {"text_hash": "STRING", "prompt_version": "STRING"},
+    "silver_extract_errors": {"text_hash": "STRING", "prompt_version": "STRING", "llm_model": "STRING"},
+}
+for table, cols in new_columns.items():
+    existing = {c.lower() for c in spark.table(f"{T}.{table}").columns}
+    missing = [f"{name} {dtype}" for name, dtype in cols.items() if name.lower() not in existing]
+    if missing:
+        spark.sql(f"ALTER TABLE {T}.{table} ADD COLUMNS ({', '.join(missing)})")
+        print(f"{table}: added {', '.join(missing)}")
 
 # COMMAND ----------
 
