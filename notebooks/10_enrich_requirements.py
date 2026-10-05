@@ -65,7 +65,7 @@ if n:
       USING (
         SELECT job_key, j.work_mode, j.seniority, j.years_min, j.must_have_skills, j.nice_to_have_skills,
                j.cloud, j.domain, j.summary, {sql_str(MODEL)} AS llm_model, current_timestamp() AS extracted_at
-        FROM (SELECT job_key, from_json(r.response, {sql_str(EXTRACTION_DDL)}) AS j
+        FROM (SELECT job_key, from_json(r.result, {sql_str(EXTRACTION_DDL)}) AS j
               FROM {T}._extract_run WHERE r.errorMessage IS NULL)
         WHERE j IS NOT NULL
       ) s

@@ -73,7 +73,7 @@ if len(todo):
             updates.append((row.job_key, None, None, [f"llm error: {row.r.errorMessage[:200]}"], "SHORTLISTED"))
             continue
         try:
-            proposal = json.loads(row.r.response)
+            proposal = json.loads(row.r.result)
         except (TypeError, json.JSONDecodeError):
             proposal = {}
         content, violations = guardrails.validate(proposal, profile)
