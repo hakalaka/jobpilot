@@ -11,6 +11,7 @@ concurrency: {group: daily-ingest, cancel-in-progress: false}
 jobs:
   ingest:
     runs-on: ubuntu-latest
+    timeout-minutes: 120
     env:
       DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
       DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
@@ -32,5 +33,8 @@ jobs:
         run: |
           id=$(databricks jobs list --name "jobpilot-daily" --output json | jq -r '.[0].job_id')
           test -n "$id" && test "$id" != "null" || { echo "job jobpilot-daily not found: deploy the bundle first"; exit 1; }
-          databricks jobs run-now "$id" --no-wait
-          echo "Started job $id" >> "$GITHUB_STEP_SUMMARY"
+          echo "Running job $id" >> "$GITHUB_STEP_SUMMARY"
+          # wait for the run so a failed pipeline also fails this workflow (visible in GitHub)
+          databricks jobs run-now "$id" --timeout 90m -o json > run.json || { cat run.json; exit 1; }
+          jq -r '"Result: \(.state.result_state) · \(.run_page_url)"' run.json >> "$GITHUB_STEP_SUMMARY"
+          jq -r '.tasks[] | "\(.task_key): \(.state.result_state)"' run.json | tee -a "$GITHUB_STEP_SUMMARY"
