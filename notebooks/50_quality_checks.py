@@ -8,6 +8,7 @@
 # MAGIC |---|---|---|
 # MAGIC | Fresh data: latest board snapshot is at most 2 days old | yes | A broken fetch would otherwise show stale "open" jobs |
 # MAGIC | Quarantine rate under 25% | yes | A board changed its format |
+# MAGIC | Warning rate (e.g. missing location) under 25% | no | A field went missing, but the postings are still usable |
 # MAGIC | Enrichment errors under 20% of last run | yes | Model endpoint or schema problem |
 # MAGIC | Every open posting has a fit score | no | Backlog still draining after a big day |
 # MAGIC | No duplicate postings in silver | yes | Key logic broken |
@@ -36,6 +37,13 @@ total = scalar(f"SELECT COUNT(*) FROM {T}.silver_postings_all") or 0
 quarantined = scalar(f"SELECT COUNT(*) FROM {T}.silver_postings_quarantine") or 0
 checks.append(("quarantine_rate", quarantined / total if total else 0.0, 0.25, "<=", True,
                f"{quarantined} of {total} postings quarantined"))
+
+# Non-blocking issues (dq_warnings, e.g. missing_location) never drop a posting, but a sudden jump
+# usually means a board changed a field. Logged and shown on the dashboard; never fails the job.
+warned = scalar(f"SELECT COUNT(*) FROM {T}.silver_postings WHERE size(dq_warnings) > 0") or 0
+clean_total = scalar(f"SELECT COUNT(*) FROM {T}.silver_postings") or 0
+checks.append(("warning_rate", warned / clean_total if clean_total else 0.0, 0.25, "<=", False,
+               f"{warned} of {clean_total} clean postings have a non-blocking issue"))
 
 ok_24h = scalar(f"SELECT COUNT(*) FROM {T}.silver_job_requirements WHERE extracted_at > current_timestamp() - INTERVAL 1 DAY") or 0
 err_24h = scalar(f"SELECT COUNT(*) FROM {T}.silver_extract_errors WHERE failed_at > current_timestamp() - INTERVAL 1 DAY") or 0
