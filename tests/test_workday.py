@@ -77,3 +77,11 @@ def test_cap_warning(capsys):
     fake = FakeWorkday({0: {"total": 2000, "jobPostings": []}})
     ats.fetch_workday(BOARD, ["data engineer"], [], pause=0, get=fake)
     assert "Workday's cap" in capsys.readouterr().out
+
+
+def test_max_pages_limits_list_calls():
+    def page(n):
+        return {"total": 2000, "jobPostings": [{"title": "Analyst", "externalPath": f"/job/x/{n}-{i}"} for i in range(20)]}
+    fake = FakeWorkday({o: page(o) for o in range(0, 2000, 20)})
+    ats.fetch_workday({**BOARD, "max_pages": 3}, ["data engineer"], [], pause=0, get=fake)
+    assert sum(1 for c in fake.calls if c[0].endswith("/jobs")) == 3       # not 100
