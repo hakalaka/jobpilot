@@ -51,3 +51,42 @@ def test_snapshot_page_handles_sample_data():
     data = json.loads((ROOT / "tests" / "fixtures" / "site_data.json").read_text())
     exp = _load(ROOT / "tools" / "export_snapshot.py")
     assert set(exp.QUERIES) <= set(data), "sample data must cover every exported query"
+
+
+def _metric_views():
+    """Dimensions and measures of every metric view, read from the notebook that creates them."""
+    import re
+    import yaml
+    src = (ROOT / "notebooks" / "30_semantic_layer.py").read_text()
+    views = {}
+    for name, body in re.findall(r"CREATE OR REPLACE VIEW \{T\}\.(\w+)\nWITH METRICS\nLANGUAGE YAML\nAS \$\$\n(.*?)\$\$", src, re.S):
+        y = yaml.safe_load(body.replace("{T}.", ""))
+        views[name] = ({d["name"] for d in y["dimensions"]}, {m["name"] for m in y["measures"]})
+    return views
+
+
+def test_dashboard_only_uses_measures_and_dimensions_that_exist():
+    # A typo in MEASURE(`...`) or a dimension name would only show up as a broken widget after deploy.
+    # This catches it in CI: every field on a metric-view dataset must be a real measure or dimension.
+    import re
+    views = _metric_views()
+    dash = json.loads((ROOT / "dashboards" / "job_market.lvdash.json").read_text())
+    mv_datasets = {d["name"]: d["asset_name"].split(".")[-1] for d in dash["datasets"] if "asset_name" in d}
+    assert mv_datasets, "expected the dashboard to read metric views"
+    checked = 0
+    for page in dash["pages"]:
+        for item in page["layout"]:
+            for q in item["widget"].get("queries", []):
+                ds = q["query"]["datasetName"]
+                if ds not in mv_datasets:
+                    continue
+                dims, measures = views[mv_datasets[ds]]
+                exprs = [f["expression"] for f in q["query"]["fields"]] + [f["expression"] for f in q["query"].get("filters", [])]
+                for e in exprs:
+                    for m in re.findall(r"MEASURE\(`([^`]+)`\)", e):
+                        assert m in measures, f"{item['widget']['name']}: no measure {m!r} in {mv_datasets[ds]}"
+                        checked += 1
+                    for col in re.findall(r"(?<!MEASURE\()`([^`]+)`", e):
+                        assert col in dims, f"{item['widget']['name']}: no dimension {col!r} in {mv_datasets[ds]}"
+                        checked += 1
+    assert checked > 10

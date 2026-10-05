@@ -1,17 +1,20 @@
 {
   "datasets": [
     {
+      "name": "mv_market",
+      "displayName": "Market metrics (metric view)",
+      "asset_name": "workspace.jobpilot.mv_job_market"
+    },
+    {
+      "name": "mv_daily",
+      "displayName": "Market over time (metric view)",
+      "asset_name": "workspace.jobpilot.mv_market_daily"
+    },
+    {
       "name": "ds_market",
       "displayName": "Job market (one row per posting)",
       "queryLines": [
-        "SELECT *,\n               -- NULL (not 0) for postings the LLM hasn't scored yet, so AVG ignores them:\n               -- same definition as strong_fit_rate in mv_job_market (enriched postings only).\n               CASE WHEN NOT is_enriched THEN NULL WHEN recommendation = 'APPLY' THEN 1.0 ELSE 0.0 END AS is_strong_fit\n        FROM workspace.jobpilot.v_job_market"
-      ]
-    },
-    {
-      "name": "ds_daily",
-      "displayName": "Open postings per day",
-      "queryLines": [
-        "SELECT d.snapshot_day, d.company, d.open_postings, d.new_postings\n        FROM workspace.jobpilot.gold_postings_daily d"
+        "SELECT * FROM workspace.jobpilot.v_job_market"
       ]
     },
     {
@@ -76,7 +79,7 @@
             "name": "text_02",
             "multilineTextboxSpec": {
               "lines": [
-                "Live from company career boards, refreshed daily by a Lakeflow pipeline. Requirements extracted with `ai_query`; fit scored against my profile."
+                "Live from company career boards, refreshed daily by a Lakeflow pipeline. Requirements extracted with `ai_query`; fit scored against my profile. Every number comes from a Unity Catalog metric view, the same one Genie uses."
               ]
             }
           },
@@ -91,6 +94,19 @@
           "widget": {
             "name": "filter_03",
             "queries": [
+              {
+                "name": "filter_city_mv_market",
+                "query": {
+                  "datasetName": "mv_market",
+                  "disaggregated": false,
+                  "fields": [
+                    {
+                      "name": "city",
+                      "expression": "`city`"
+                    }
+                  ]
+                }
+              },
               {
                 "name": "filter_city_ds_market",
                 "query": {
@@ -152,6 +168,11 @@
                   {
                     "fieldName": "city",
                     "displayName": "City",
+                    "queryName": "filter_city_mv_market"
+                  },
+                  {
+                    "fieldName": "city",
+                    "displayName": "City",
                     "queryName": "filter_city_ds_market"
                   },
                   {
@@ -188,6 +209,19 @@
           "widget": {
             "name": "filter_04",
             "queries": [
+              {
+                "name": "filter_domain_mv_market",
+                "query": {
+                  "datasetName": "mv_market",
+                  "disaggregated": false,
+                  "fields": [
+                    {
+                      "name": "domain",
+                      "expression": "`domain`"
+                    }
+                  ]
+                }
+              },
               {
                 "name": "filter_domain_ds_market",
                 "query": {
@@ -249,6 +283,11 @@
                   {
                     "fieldName": "domain",
                     "displayName": "Domain",
+                    "queryName": "filter_domain_mv_market"
+                  },
+                  {
+                    "fieldName": "domain",
+                    "displayName": "Domain",
                     "queryName": "filter_domain_ds_market"
                   },
                   {
@@ -288,11 +327,11 @@
               {
                 "name": "main_query",
                 "query": {
-                  "datasetName": "ds_market",
+                  "datasetName": "mv_market",
                   "fields": [
                     {
                       "name": "open_postings",
-                      "expression": "COUNT(DISTINCT `job_key`)"
+                      "expression": "MEASURE(`open_postings`)"
                     }
                   ],
                   "disaggregated": false,
@@ -333,11 +372,11 @@
               {
                 "name": "main_query",
                 "query": {
-                  "datasetName": "ds_market",
+                  "datasetName": "mv_market",
                   "fields": [
                     {
                       "name": "companies",
-                      "expression": "COUNT(DISTINCT `company`)"
+                      "expression": "MEASURE(`companies`)"
                     }
                   ],
                   "disaggregated": false,
@@ -378,11 +417,11 @@
               {
                 "name": "main_query",
                 "query": {
-                  "datasetName": "ds_market",
+                  "datasetName": "mv_market",
                   "fields": [
                     {
                       "name": "median_years",
-                      "expression": "MEDIAN(`years_required`)"
+                      "expression": "MEASURE(`median_years_required`)"
                     }
                   ],
                   "disaggregated": false,
@@ -423,11 +462,11 @@
               {
                 "name": "main_query",
                 "query": {
-                  "datasetName": "ds_market",
+                  "datasetName": "mv_market",
                   "fields": [
                     {
-                      "name": "strong_fit_share",
-                      "expression": "AVG(`is_strong_fit`)"
+                      "name": "strong_fit_rate",
+                      "expression": "MEASURE(`strong_fit_rate`)"
                     }
                   ],
                   "disaggregated": false,
@@ -444,8 +483,8 @@
               "widgetType": "counter",
               "encodings": {
                 "value": {
-                  "fieldName": "strong_fit_share",
-                  "displayName": "Strong-fit share",
+                  "fieldName": "strong_fit_rate",
+                  "displayName": "Strong-fit rate",
                   "format": {
                     "type": "number-percent",
                     "decimalPlaces": {
@@ -457,7 +496,7 @@
               },
               "frame": {
                 "showTitle": true,
-                "title": "Strong-fit share"
+                "title": "Strong-fit rate"
               }
             }
           },
@@ -564,20 +603,124 @@
         },
         {
           "widget": {
-            "name": "line_11",
+            "name": "kpi_11",
             "queries": [
               {
                 "name": "main_query",
                 "query": {
-                  "datasetName": "ds_daily",
+                  "datasetName": "mv_market",
                   "fields": [
                     {
-                      "name": "snapshot_day",
-                      "expression": "`snapshot_day`"
+                      "name": "largest_company_share",
+                      "expression": "MEASURE(`largest_company_share`)"
+                    }
+                  ],
+                  "disaggregated": false,
+                  "filters": [
+                    {
+                      "expression": "`is_open`"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "largest_company_share",
+                  "displayName": "Share from the largest company",
+                  "format": {
+                    "type": "number-percent",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 0
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Share from the largest company"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 5,
+            "width": 3,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "kpi_12",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "mv_market",
+                  "fields": [
+                    {
+                      "name": "enrichment_coverage",
+                      "expression": "MEASURE(`enrichment_coverage`)"
+                    }
+                  ],
+                  "disaggregated": false,
+                  "filters": [
+                    {
+                      "expression": "`is_open`"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "enrichment_coverage",
+                  "displayName": "Postings analysed by the LLM",
+                  "format": {
+                    "type": "number-percent",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 0
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Postings analysed by the LLM"
+              }
+            }
+          },
+          "position": {
+            "x": 3,
+            "y": 5,
+            "width": 3,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "line_13",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "mv_daily",
+                  "fields": [
+                    {
+                      "name": "day",
+                      "expression": "`day`"
                     },
                     {
                       "name": "open",
-                      "expression": "SUM(`open_postings`)"
+                      "expression": "MEASURE(`avg_open_postings`)"
                     }
                   ],
                   "disaggregated": false
@@ -589,7 +732,7 @@
               "widgetType": "line",
               "encodings": {
                 "x": {
-                  "fieldName": "snapshot_day",
+                  "fieldName": "day",
                   "displayName": "Day",
                   "scale": {
                     "type": "temporal"
@@ -616,19 +759,19 @@
           },
           "position": {
             "x": 0,
-            "y": 5,
+            "y": 7,
             "width": 3,
             "height": 4
           }
         },
         {
           "widget": {
-            "name": "bar_12",
+            "name": "bar_14",
             "queries": [
               {
                 "name": "main_query",
                 "query": {
-                  "datasetName": "ds_market",
+                  "datasetName": "mv_market",
                   "fields": [
                     {
                       "name": "city",
@@ -636,7 +779,7 @@
                     },
                     {
                       "name": "postings",
-                      "expression": "COUNT(DISTINCT `job_key`)"
+                      "expression": "MEASURE(`open_postings`)"
                     }
                   ],
                   "disaggregated": false,
@@ -683,14 +826,14 @@
           },
           "position": {
             "x": 3,
-            "y": 5,
+            "y": 7,
             "width": 3,
             "height": 4
           }
         },
         {
           "widget": {
-            "name": "bar_13",
+            "name": "bar_15",
             "queries": [
               {
                 "name": "main_query",
@@ -765,19 +908,19 @@
           },
           "position": {
             "x": 0,
-            "y": 9,
+            "y": 11,
             "width": 4,
             "height": 7
           }
         },
         {
           "widget": {
-            "name": "bar_14",
+            "name": "bar_16",
             "queries": [
               {
                 "name": "main_query",
                 "query": {
-                  "datasetName": "ds_market",
+                  "datasetName": "mv_market",
                   "fields": [
                     {
                       "name": "domain",
@@ -785,13 +928,16 @@
                     },
                     {
                       "name": "postings",
-                      "expression": "COUNT(DISTINCT `job_key`)"
+                      "expression": "MEASURE(`open_postings`)"
                     }
                   ],
                   "disaggregated": false,
                   "filters": [
                     {
                       "expression": "`is_open`"
+                    },
+                    {
+                      "expression": "`is_enriched`"
                     }
                   ]
                 }
@@ -832,14 +978,14 @@
           },
           "position": {
             "x": 4,
-            "y": 9,
+            "y": 11,
             "width": 2,
             "height": 7
           }
         },
         {
           "widget": {
-            "name": "table_15",
+            "name": "table_17",
             "queries": [
               {
                 "name": "main_query",
@@ -930,7 +1076,7 @@
           },
           "position": {
             "x": 0,
-            "y": 16,
+            "y": 18,
             "width": 6,
             "height": 6
           }
@@ -944,7 +1090,7 @@
       "layout": [
         {
           "widget": {
-            "name": "text_16",
+            "name": "text_18",
             "multilineTextboxSpec": {
               "lines": [
                 "# My fit and skill gaps"
@@ -960,10 +1106,10 @@
         },
         {
           "widget": {
-            "name": "text_17",
+            "name": "text_19",
             "multilineTextboxSpec": {
               "lines": [
-                "Deterministic fit score per posting: must-have coverage 55%, nice-to-have 15%, years 15%, location 10%, domain 5%. Gaps on my learning list are what I'm studying next."
+                "Deterministic fit score per posting: must-have coverage 55%, nice-to-have 15%, years 15%, location 10%, domain 5%. Gaps on my learning list are what I'm studying next. Only postings the LLM has analysed have a fit score."
               ]
             }
           },
@@ -976,12 +1122,12 @@
         },
         {
           "widget": {
-            "name": "bar_18",
+            "name": "bar_20",
             "queries": [
               {
                 "name": "main_query",
                 "query": {
-                  "datasetName": "ds_market",
+                  "datasetName": "mv_market",
                   "fields": [
                     {
                       "name": "recommendation",
@@ -989,13 +1135,16 @@
                     },
                     {
                       "name": "postings",
-                      "expression": "COUNT(DISTINCT `job_key`)"
+                      "expression": "MEASURE(`open_postings`)"
                     }
                   ],
                   "disaggregated": false,
                   "filters": [
                     {
                       "expression": "`is_open`"
+                    },
+                    {
+                      "expression": "`is_enriched`"
                     }
                   ]
                 }
@@ -1043,7 +1192,7 @@
         },
         {
           "widget": {
-            "name": "bar_19",
+            "name": "bar_21",
             "queries": [
               {
                 "name": "main_query",
@@ -1125,12 +1274,12 @@
         },
         {
           "widget": {
-            "name": "bar_20",
+            "name": "bar_22",
             "queries": [
               {
                 "name": "main_query",
                 "query": {
-                  "datasetName": "ds_market",
+                  "datasetName": "mv_market",
                   "fields": [
                     {
                       "name": "domain",
@@ -1138,13 +1287,16 @@
                     },
                     {
                       "name": "avg_fit",
-                      "expression": "AVG(`fit_score`)"
+                      "expression": "MEASURE(`avg_fit_score`)"
                     }
                   ],
                   "disaggregated": false,
                   "filters": [
                     {
                       "expression": "`is_open`"
+                    },
+                    {
+                      "expression": "`is_enriched`"
                     }
                   ]
                 }
@@ -1192,12 +1344,12 @@
         },
         {
           "widget": {
-            "name": "bar_21",
+            "name": "bar_23",
             "queries": [
               {
                 "name": "main_query",
                 "query": {
-                  "datasetName": "ds_market",
+                  "datasetName": "mv_market",
                   "fields": [
                     {
                       "name": "seniority",
@@ -1205,13 +1357,16 @@
                     },
                     {
                       "name": "avg_fit",
-                      "expression": "AVG(`fit_score`)"
+                      "expression": "MEASURE(`avg_fit_score`)"
                     }
                   ],
                   "disaggregated": false,
                   "filters": [
                     {
                       "expression": "`is_open`"
+                    },
+                    {
+                      "expression": "`is_enriched`"
                     }
                   ]
                 }
@@ -1266,7 +1421,7 @@
       "layout": [
         {
           "widget": {
-            "name": "text_22",
+            "name": "text_24",
             "multilineTextboxSpec": {
               "lines": [
                 "# Pipeline health"
@@ -1282,7 +1437,7 @@
         },
         {
           "widget": {
-            "name": "text_23",
+            "name": "text_25",
             "multilineTextboxSpec": {
               "lines": [
                 "Quality gate results from the last run (blocking checks fail the job and alert by email), and rows landed in bronze per day."
@@ -1298,7 +1453,7 @@
         },
         {
           "widget": {
-            "name": "table_24",
+            "name": "table_26",
             "queries": [
               {
                 "name": "main_query",
@@ -1388,7 +1543,7 @@
         },
         {
           "widget": {
-            "name": "line_25",
+            "name": "line_27",
             "queries": [
               {
                 "name": "main_query",
