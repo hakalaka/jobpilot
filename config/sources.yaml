@@ -1,6 +1,120 @@
 # Written by tools/discover_boards.py (discover-boards workflow). Edit filters freely;
 # edit config/board_candidates.yaml to add companies, then re-run discovery.
-title_keywords: [data engineer, databricks, analytics engineer, big data, data platform, lakehouse, etl, data architect]
-locations: [bengaluru, bangalore, india, remote - india, hyderabad, pune, mumbai, gurugram, gurgaon, chennai, noida]
+title_keywords:
+- data engineer
+- databricks
+- analytics engineer
+- big data
+- data platform
+- lakehouse
+- etl
+- data architect
+locations:
+- bengaluru
+- bangalore
+- india
+- remote - india
+- hyderabad
+- pune
+- mumbai
+- gurugram
+- gurgaon
+- chennai
+- noida
 boards:
-  - {source: greenhouse, token: databricks, company: Databricks}
+- source: greenhouse
+  token: databricks
+  company: Databricks
+- source: greenhouse
+  token: mongodb
+  company: MongoDB
+- source: greenhouse
+  token: elastic
+  company: Elastic
+- source: greenhouse
+  token: okta
+  company: Okta
+- source: greenhouse
+  token: twilio
+  company: Twilio
+- source: greenhouse
+  token: cloudflare
+  company: Cloudflare
+- source: greenhouse
+  token: rubrik
+  company: Rubrik
+- source: greenhouse
+  token: zscaler
+  company: Zscaler
+- source: greenhouse
+  token: harnessinc
+  company: Harness
+- source: greenhouse
+  token: druva
+  company: Druva
+- source: lever
+  token: hevodata
+  company: Hevo Data
+- source: greenhouse
+  token: fivetran
+  company: Fivetran
+- source: greenhouse
+  token: sigmoid
+  company: Sigmoid
+- source: greenhouse
+  token: stripe
+  company: Stripe
+- source: greenhouse
+  token: coinbase
+  company: Coinbase
+- source: greenhouse
+  token: capco
+  company: Capco
+- source: greenhouse
+  token: razorpaysoftwareprivatelimited
+  company: Razorpay
+- source: lever
+  token: cred
+  company: CRED
+- source: greenhouse
+  token: groww
+  company: Groww
+- source: lever
+  token: zeta
+  company: Zeta
+- source: lever
+  token: nium
+  company: Nium
+- source: lever
+  token: veeva
+  company: Veeva Systems
+- source: greenhouse
+  token: zocdoc
+  company: Zocdoc
+- source: greenhouse
+  token: komodohealth
+  company: Komodo Health
+- source: greenhouse
+  token: roku
+  company: Roku
+- source: lever
+  token: meesho
+  company: Meesho
+- source: lever
+  token: mindtickle
+  company: Mindtickle
+- source: greenhouse
+  token: observeai
+  company: Observe.AI
+- source: greenhouse
+  token: hackerrank
+  company: HackerRank
+- source: greenhouse
+  token: instawork
+  company: Instawork
+- source: greenhouse
+  token: degreed
+  company: Degreed
+- source: lever
+  token: neuron7
+  company: Neuron7
