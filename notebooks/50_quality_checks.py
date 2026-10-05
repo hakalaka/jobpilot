@@ -10,6 +10,7 @@
 # MAGIC | Quarantine rate under 25% | yes | A board changed its format |
 # MAGIC | Warning rate (e.g. missing location) under 25% | no | A field went missing, but the postings are still usable |
 # MAGIC | Enrichment errors under 20% of last run | yes | Model endpoint or schema problem |
+# MAGIC | No postings given up by enrichment | no | A posting the model keeps failing on; it's retried when its text, the prompt or the model changes |
 # MAGIC | Every open posting has a fit score | no | Backlog still draining after a big day |
 # MAGIC | No duplicate postings in silver | yes | Key logic broken |
 
@@ -49,6 +50,16 @@ ok_24h = scalar(f"SELECT COUNT(*) FROM {T}.silver_job_requirements WHERE extract
 err_24h = scalar(f"SELECT COUNT(*) FROM {T}.silver_extract_errors WHERE failed_at > current_timestamp() - INTERVAL 1 DAY") or 0
 checks.append(("enrichment_error_rate_24h", err_24h / (ok_24h + err_24h) if (ok_24h + err_24h) else 0.0, 0.20, "<=", True,
                f"{err_24h} errors, {ok_24h} successes in 24h"))
+
+# Postings the enrichment task stopped retrying (they failed max_attempts times with the same text, prompt
+# and model). Not blocking: the rest of the market is fine. The number comes from the enrichment task
+# itself (a task value), so the "given up" rule lives in one place. Run by hand, it falls back to 0.
+try:
+    given_up = dbutils.jobs.taskValues.get(taskKey="enrich_requirements", key="given_up", default=0, debugValue=0)
+except Exception:  # noqa: BLE001
+    given_up = 0
+checks.append(("enrichment_given_up", given_up, 0, "<=", False,
+               "open postings skipped after repeated model failures (see silver_extract_errors)"))
 
 unscored = scalar(f"""SELECT COUNT(*) FROM {T}.silver_postings p LEFT ANTI JOIN {T}.gold_job_fit g USING (job_key)
                       WHERE p.is_open""") or 0

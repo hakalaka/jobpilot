@@ -2,6 +2,12 @@
 import json
 
 # ---------- Step 1: extract structured requirements from a raw job description ----------
+
+# Bump this whenever EXTRACTION_PROMPT, EXTRACTION_SCHEMA or EXTRACTION_DDL changes (v1 -> v2).
+# Every stored extraction records the version it was made with, so after a bump the enrichment
+# notebook re-extracts old postings with the new prompt, a few per run, newest first.
+# tests/test_prompts.py fails if the prompt changes and this version doesn't.
+EXTRACTION_VERSION = "v1"
 EXTRACTION_FIELDS = {
     "title": "string",
     "company": "string",
@@ -102,3 +108,11 @@ def tailor_prompt(profile_raw: dict, job: dict) -> str:
         f"BULLET BANK: {json.dumps(bank)}\n\n"
         f"JOB: {json.dumps(job, default=str)}\n"
     )
+
+
+def extraction_fingerprint() -> str:
+    """Short hash of everything that shapes the model's answer (prompt, schema, parse DDL).
+    Used only by the test that makes sure EXTRACTION_VERSION is bumped when any of them change."""
+    import hashlib
+    blob = EXTRACTION_PROMPT + json.dumps(EXTRACTION_SCHEMA, sort_keys=True) + EXTRACTION_DDL
+    return hashlib.sha256(blob.encode()).hexdigest()[:12]
