@@ -6,7 +6,9 @@ on:
   pull_request:
   workflow_dispatch:
 
-concurrency: {group: deploy-${{ github.ref }}, cancel-in-progress: false}
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   test:
