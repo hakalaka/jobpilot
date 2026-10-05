@@ -21,7 +21,17 @@ locations:
 - gurgaon
 - chennai
 - noida
+# Workday boards are configured by hand (see docs/CONNECTORS.md).
 boards:
+- source: workday
+  company: Accenture
+  host: accenture.wd103.myworkdayjobs.com
+  tenant: accenture
+  site: AccentureCareers
+  search_texts: [databricks]
+  facets:
+    locationCountry: [c4f78be1a8f14da0ab49ce1162348a5e]   # India
+  max_jobs: 300
 - source: greenhouse
   token: databricks
   company: Databricks

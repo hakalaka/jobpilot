@@ -1,0 +1,45 @@
+{
+ "total": 2000,
+ "jobPostings": [
+  {
+   "title": "Data Engineer",
+   "externalPath": "/job/Bengaluru/Data-Engineer_ATCI-5402250-S2026701-1",
+   "postedOn": "Posted 19 Days Ago",
+   "bulletFields": [
+    "ATCI-5402250-S2026701",
+    "Bengaluru"
+   ]
+  },
+  {
+   "title": "Data Engineer",
+   "externalPath": "/job/Pune/Data-Engineer_ATCI-5636840-S2055735-1",
+   "postedOn": "Posted 12 Days Ago",
+   "bulletFields": [
+    "ATCI-5636840-S2055735",
+    "Pune"
+   ]
+  },
+  {
+   "title": "Business Analyst",
+   "externalPath": "/job/Pune/Business-Analyst_ATCI-1-1",
+   "postedOn": "Posted 2 Days Ago",
+   "bulletFields": [
+    "ATCI-1",
+    "Pune"
+   ]
+  }
+ ],
+ "facets": [
+  {
+   "facetParameter": "locationCountry",
+   "descriptor": "Country",
+   "values": [
+    {
+     "descriptor": "India",
+     "id": "c4f78be1a8f14da0ab49ce1162348a5e",
+     "count": 1
+    }
+   ]
+  }
+ ]
+}
