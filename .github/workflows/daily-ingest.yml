@@ -28,13 +28,22 @@ jobs:
       - name: Land file in the volume
         run: |
           f=$(ls out/ats_*.jsonl)
-          if [ -s "$f" ]; then databricks fs cp "$f" "$LANDING"; else echo "empty snapshot, nothing to land"; fi
+          if [ ! -s "$f" ]; then echo "empty snapshot, nothing to land"; exit 0; fi
+          databricks fs mkdir "$LANDING" 2> err.txt || true
+          if ! databricks fs cp "$f" "$LANDING$(basename "$f")" 2>> err.txt; then
+            echo "::error title=Landing failed::$(tr '\n' ' ' < err.txt)"; exit 1
+          fi
+          echo "Landed $(basename "$f")" >> "$GITHUB_STEP_SUMMARY"
       - name: Start the pipeline job
         run: |
           id=$(databricks jobs list --name "jobpilot-daily" --output json | jq -r '.[0].job_id')
-          test -n "$id" && test "$id" != "null" || { echo "job jobpilot-daily not found: deploy the bundle first"; exit 1; }
+          test -n "$id" && test "$id" != "null" || { echo "::error::job jobpilot-daily not found: deploy the bundle first"; exit 1; }
           echo "Running job $id" >> "$GITHUB_STEP_SUMMARY"
           # wait for the run so a failed pipeline also fails this workflow (visible in GitHub)
-          databricks jobs run-now "$id" --timeout 90m -o json > run.json || { cat run.json; exit 1; }
+          if ! databricks jobs run-now "$id" --timeout 90m -o json > run.json 2> err.txt; then
+            echo "::error title=Databricks job failed::$(tr '\n' ' ' < err.txt | cut -c1-900)"
+            jq -r '.tasks[]? | "::warning::\(.task_key): \(.state.result_state)"' run.json 2>/dev/null || true
+            exit 1
+          fi
           jq -r '"Result: \(.state.result_state) · \(.run_page_url)"' run.json >> "$GITHUB_STEP_SUMMARY"
           jq -r '.tasks[] | "\(.task_key): \(.state.result_state)"' run.json | tee -a "$GITHUB_STEP_SUMMARY"
