@@ -25,6 +25,7 @@ How JobPilot runs, how you know it's healthy, and what to do when it isn't.
 |---|---|---|
 | `fresh_board_snapshot_days` failed | The 07:00 Action failed, or the token expired | Check the latest `daily-ingest` run. Expired token: create a new PAT, update the `DATABRICKS_TOKEN` secret, re-run the Action. |
 | Action says `job jobpilot-daily not found` | Bundle never deployed, or deploy failed | Re-run the `ci` workflow; check the deploy step's log. |
+| `warning_rate` shows WARN (job still succeeds) | A board stopped sending a non-critical field (location, URL) | `SELECT issue, company, COUNT(*) FROM silver_postings LATERAL VIEW explode(dq_warnings) w AS issue GROUP BY ALL`. Fix the parser when convenient; postings are still used. |
 | `quarantine_rate` failed | A board changed its format (e.g. empty descriptions) | `SELECT reason, company, COUNT(*) FROM silver_postings_quarantine GROUP BY ALL`. Fix the parser in `src/jobpilot/ats.py`, add a test with the new shape, push. |
 | `enrichment_error_rate_24h` failed | Model endpoint renamed, rate-limited, or out of quota | `SELECT error, COUNT(*) FROM silver_extract_errors WHERE failed_at > now() - INTERVAL 1 DAY GROUP BY 1`. Change `llm_endpoint` in `databricks.yml` if renamed; lower `max_extract` if rate-limited. Failed postings retry automatically next run. |
 | `duplicate_postings_in_silver` failed | Key logic changed | Check recent changes to `job_key` in `ats.py`. Silver is a materialized view, so a fix plus a pipeline full refresh rebuilds it. |
