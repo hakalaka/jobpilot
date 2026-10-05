@@ -1,0 +1,26 @@
+name: discover-boards
+# Probes config/board_candidates.yaml on Greenhouse and Lever and commits the verified list.
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 2 1 * *"        # monthly, 07:30 IST on the 1st
+
+permissions: {contents: write}
+
+jobs:
+  discover:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.11"}
+      - run: pip install pyyaml
+      - run: python tools/discover_boards.py
+      - run: cat out/discovery.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Commit verified boards
+        run: |
+          git config user.name "jobpilot-bot"
+          git config user.email "jobpilot-bot@users.noreply.github.com"
+          git add config/sources.yaml
+          git diff --cached --quiet || git commit -m "chore: refresh verified career boards"
+          git push

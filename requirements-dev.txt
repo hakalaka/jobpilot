@@ -1,0 +1,4 @@
+pyyaml
+python-docx
+pytest
+databricks-sdk

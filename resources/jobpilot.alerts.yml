@@ -1,0 +1,45 @@
+resources:
+  alerts:
+    stale_job_data:
+      display_name: "JobPilot: career-board data is stale"
+      warehouse_id: ${var.warehouse_id}
+      query_text: |
+        SELECT DATEDIFF(current_date(), MAX(snapshot_day)) AS days_stale
+        FROM ${var.catalog}.${var.schema}.bronze_job_snapshots
+        WHERE source <> 'manual'
+      evaluation:
+        source: {name: days_stale, display: Days since last snapshot}
+        comparison_operator: GREATER_THAN
+        threshold: {value: {double_value: 2}}
+        empty_result_state: TRIGGERED
+        notification:
+          notify_on_ok: true
+          subscriptions:
+            - user_email: ${workspace.current_user.userName}
+      schedule:
+        quartz_cron_schedule: "0 0 11 * * ?"     # 11:00 IST daily, after the morning run
+        timezone_id: Asia/Kolkata
+        pause_status: UNPAUSED
+      custom_summary: "JobPilot data is {{ALERT_STATUS}}: last career-board snapshot was {{QUERY_RESULT_VALUE}} days ago"
+    quality_gate_failed:
+      display_name: "JobPilot: blocking quality check failed"
+      warehouse_id: ${var.warehouse_id}
+      query_text: |
+        SELECT COUNT(*) AS failed_blocking_checks
+        FROM (
+          SELECT passed, blocking,
+                 ROW_NUMBER() OVER (PARTITION BY check_name ORDER BY checked_at DESC) AS rn
+          FROM ${var.catalog}.${var.schema}.ops_quality_log
+        ) WHERE rn = 1 AND blocking AND NOT passed
+      evaluation:
+        source: {name: failed_blocking_checks, display: Failed blocking checks}
+        comparison_operator: GREATER_THAN
+        threshold: {value: {double_value: 0}}
+        empty_result_state: OK
+        notification:
+          subscriptions:
+            - user_email: ${workspace.current_user.userName}
+      schedule:
+        quartz_cron_schedule: "0 15 11 * * ?"
+        timezone_id: Asia/Kolkata
+        pause_status: UNPAUSED

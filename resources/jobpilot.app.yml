@@ -1,0 +1,15 @@
+resources:
+  apps:
+    jobpilot_app:
+      name: jobpilot
+      description: Review tailored resumes, add jobs, and track applications
+      source_code_path: ../app
+      resources:
+        - name: sql-warehouse
+          sql_warehouse:
+            id: ${var.warehouse_id}
+            permission: CAN_USE
+        - name: pipeline-job
+          job:
+            id: ${resources.jobs.jobpilot_daily.id}
+            permission: CAN_MANAGE_RUN

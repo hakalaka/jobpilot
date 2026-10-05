@@ -1,0 +1,4 @@
+[{"id": "abc-123", "text": "Lead Data Engineer", "categories": {"location": "Bangalore", "team": "Data", "commitment": "Full-time"},
+  "hostedUrl": "https://jobs.lever.co/fintech/abc-123", "applyUrl": "https://jobs.lever.co/fintech/abc-123/apply",
+  "descriptionPlain": "Build our lakehouse.", "lists": [{"text": "Requirements", "content": "<li>Delta Lake</li><li>Spark</li>"}],
+  "additionalPlain": "Hybrid.", "createdAt": 1758000000000, "workplaceType": "hybrid"}]

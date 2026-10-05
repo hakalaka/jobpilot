@@ -1,0 +1,23 @@
+resources:
+  schemas:
+    jobpilot:
+      catalog_name: ${var.catalog}
+      name: ${var.schema}
+      comment: "JobPilot: the India data-engineering job market as a lakehouse"
+      lifecycle:
+        prevent_destroy: true        # never drop data on a bad deploy
+  volumes:
+    raw:
+      catalog_name: ${var.catalog}
+      schema_name: ${resources.schemas.jobpilot.name}
+      name: raw
+      comment: Landing zone for daily career-board snapshots and pasted JDs
+      lifecycle:
+        prevent_destroy: true
+    private:
+      catalog_name: ${var.catalog}
+      schema_name: ${resources.schemas.jobpilot.name}
+      name: private
+      comment: "Private: master profile, saved links, generated resumes"
+      lifecycle:
+        prevent_destroy: true

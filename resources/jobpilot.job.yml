@@ -1,0 +1,38 @@
+resources:
+  jobs:
+    jobpilot_daily:
+      name: jobpilot-daily
+      description: >
+        Daily run, started by the daily-ingest GitHub Action after it lands the career-board snapshot.
+        Lakeflow pipeline -> LLM enrichment -> scoring -> semantic layer -> quality gate (+ private resume tailoring).
+      max_concurrent_runs: 1
+      timeout_seconds: 5400
+      email_notifications:
+        on_failure: ["${var.alert_email}"]
+      parameters:
+        - {name: catalog, default: "${var.catalog}"}
+        - {name: schema, default: "${var.schema}"}
+        - {name: llm_endpoint, default: "${var.llm_endpoint}"}
+      tasks:
+        - task_key: setup
+          notebook_task: {notebook_path: ../notebooks/00_setup.py}
+        - task_key: ingest_pipeline
+          depends_on: [{task_key: setup}]
+          pipeline_task: {pipeline_id: "${resources.pipelines.jobpilot_ingest.id}"}
+        - task_key: enrich_requirements
+          depends_on: [{task_key: ingest_pipeline}]
+          max_retries: 1
+          min_retry_interval_millis: 60000
+          notebook_task: {notebook_path: ../notebooks/10_enrich_requirements.py}
+        - task_key: score_jobs
+          depends_on: [{task_key: enrich_requirements}]
+          notebook_task: {notebook_path: ../notebooks/20_score_jobs.py}
+        - task_key: semantic_layer
+          depends_on: [{task_key: score_jobs}]
+          notebook_task: {notebook_path: ../notebooks/30_semantic_layer.py}
+        - task_key: tailor_resumes
+          depends_on: [{task_key: score_jobs}]
+          notebook_task: {notebook_path: ../notebooks/40_tailor_resumes.py}
+        - task_key: quality_gate
+          depends_on: [{task_key: semantic_layer}]
+          notebook_task: {notebook_path: ../notebooks/50_quality_checks.py}

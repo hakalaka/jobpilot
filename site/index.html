@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>JobPilot · India data-engineering job market</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22%3E%3Crect width=%2216%22 height=%2216%22 rx=%224%22 fill=%22%232a78d6%22/%3E%3C/svg%3E">
+<meta name="description" content="A daily-refreshed view of data-engineering job postings in India, built on a Databricks lakehouse by Piyush Chavan.">
+<style>
+  :root {
+    color-scheme: light;
+    --surface: #fcfcfb; --surface-2: #f4f3f0; --line: #e4e2dd;
+    --text: #0b0b0b; --text-2: #52514e; --text-3: #75736e;
+    --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --wash: rgba(42,120,214,.10);
+    --good: #0ca30c; --critical: #d03b3b;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) {
+      color-scheme: dark;
+      --surface: #1a1a19; --surface-2: #232321; --line: #383835;
+      --text: #ffffff; --text-2: #c3c2b7; --text-3: #9b9a91;
+      --s1: #3987e5; --s2: #d95926; --s3: #199e70; --wash: rgba(57,135,229,.14);
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--surface); color: var(--text);
+         font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 1080px; margin: 0 auto; padding: 32px 16px 56px; }
+  a { color: var(--s1); }
+  header p { color: var(--text-2); margin: 4px 0 0; max-width: 720px; }
+  h1 { font-size: 26px; margin: 0; letter-spacing: -.01em; }
+  h2 { font-size: 16px; margin: 0 0 2px; }
+  .sub { color: var(--text-2); font-size: 13px; margin: 0 0 12px; }
+  .hero { display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-end; margin: 28px 0 8px; }
+  .hero .num { font-size: 56px; font-weight: 650; line-height: 1; font-variant-numeric: tabular-nums; }
+  .hero .lbl { color: var(--text-2); }
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin: 20px 0 28px; }
+  .kpi { background: var(--surface-2); border-radius: 10px; padding: 12px 14px; }
+  .kpi .v { font-size: 24px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .kpi .l { color: var(--text-2); font-size: 13px; }
+  .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px 32px; }
+  .card { min-width: 0; }
+  .wide { grid-column: 1 / -1; }
+  @media (max-width: 760px) { .grid { grid-template-columns: 1fr; } .hero .num { font-size: 48px; } }
+  svg { display: block; width: 100%; height: auto; overflow: visible; }
+  svg text { fill: var(--text-2); font-size: 12px; }
+  svg .val { fill: var(--text); font-variant-numeric: tabular-nums; }
+  .legend { display: flex; gap: 16px; flex-wrap: wrap; font-size: 13px; color: var(--text-2); margin: 0 0 8px; }
+  .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
+  .tip { position: fixed; pointer-events: none; background: var(--surface); color: var(--text); border: 1px solid var(--line);
+         border-radius: 8px; padding: 6px 10px; font-size: 13px; box-shadow: 0 4px 16px rgba(0,0,0,.12); display: none; z-index: 5; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+  th { color: var(--text-2); font-weight: 500; font-size: 13px; }
+  td.n { text-align: right; font-variant-numeric: tabular-nums; }
+  .table-wrap { overflow-x: auto; }
+  details { margin-top: 8px; font-size: 13px; color: var(--text-2); }
+  .status { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-2); }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--good); }
+  .how { margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--line); color: var(--text-2); font-size: 14px; }
+  .how ol { padding-left: 20px; } .how li { margin: 4px 0; }
+  .err { padding: 16px; border-radius: 10px; background: var(--surface-2); }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>India data-engineering job market</h1>
+    <p>Live postings from company career boards, refreshed every morning by a Databricks lakehouse pipeline.
+       Requirements are extracted with an LLM; the fit score compares each posting with my profile.
+       <a href="https://github.com/hakalaka/jobpilot">How it's built →</a></p>
+  </header>
+
+  <div id="app"><p class="sub">Loading…</p></div>
+
+  <section class="how">
+    <h2>How this page is made</h2>
+    <ol>
+      <li>A GitHub Action snapshots ~50 company career boards (Greenhouse, Lever) daily and lands the file in a Unity Catalog volume.</li>
+      <li>A Lakeflow declarative pipeline loads it with Auto Loader (bronze), tracks each posting's first and last day (silver), and quarantines bad rows.</li>
+      <li><code>ai_query</code> extracts skills, years and domain from each new posting, exactly once; a deterministic scorer rates fit (gold).</li>
+      <li>Metric views define every number here once; the same layer powers an AI/BI dashboard and a Genie Agent.</li>
+      <li>A quality gate must pass before this page is republished.</li>
+    </ol>
+    <p>Built by Piyush Chavan, Data Engineer · <a href="https://github.com/hakalaka/jobpilot">source on GitHub</a></p>
+  </section>
+</main>
+<div class="tip" id="tip" role="status" aria-live="polite"></div>
+
+<script>
+const $ = (s) => document.querySelector(s);
+const num = (v) => (v === null || v === undefined || v === "") ? null : Number(v);
+const fmtInt = (v) => v === null ? "–" : Math.round(v).toLocaleString("en-IN");
+const fmtPct = (v) => v === null ? "–" : Math.round(v * 100) + "%";
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const STATUS = [["Have it", "var(--s1)"], ["Learning", "var(--s2)"], ["Gap", "var(--s3)"]];
+const tip = $("#tip");
+function showTip(e, html) { tip.innerHTML = html; tip.style.display = "block";
+  const x = Math.min(e.clientX + 14, innerWidth - tip.offsetWidth - 8); tip.style.left = x + "px"; tip.style.top = (e.clientY + 14) + "px"; }
+function hideTip() { tip.style.display = "none"; }
+
+function hbars(rows, { label, value, color = () => "var(--s1)", tipFn }) {
+  const W = 480, rowH = 26, barH = 16, left = 150, right = 44, H = rows.length * rowH + 4;
+  const max = Math.max(1, ...rows.map((r) => r[value]));
+  const scale = (v) => (v / max) * (W - left - right);
+  const g = rows.map((r, i) => {
+    const y = i * rowH + (rowH - barH) / 2, w = Math.max(2, scale(r[value])), rr = Math.min(4, w / 2);
+    const d = `M${left},${y} h${w - rr} a${rr},${rr} 0 0 1 ${rr},${rr} v${barH - 2 * rr} a${rr},${rr} 0 0 1 -${rr},${rr} h-${w - rr} z`;
+    return `<g class="hit" data-i="${i}">
+      <rect x="0" y="${i * rowH}" width="${W}" height="${rowH}" fill="transparent"></rect>
+      <text x="${left - 8}" y="${y + barH - 4}" text-anchor="end">${esc(r[label])}</text>
+      <path d="${d}" fill="${color(r)}"></path>
+      <text class="val" x="${left + w + 6}" y="${y + barH - 4}">${fmtInt(r[value])}</text></g>`;
+  }).join("");
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`); svg.setAttribute("role", "img");
+  svg.innerHTML = g;
+  svg.querySelectorAll(".hit").forEach((el) => {
+    const r = rows[+el.dataset.i];
+    el.addEventListener("mousemove", (e) => showTip(e, tipFn ? tipFn(r) : `<b>${esc(r[label])}</b><br>${fmtInt(r[value])}`));
+    el.addEventListener("mouseleave", hideTip);
+  });
+  return svg;
+}
+
+function lineChart(rows) {
+  const W = 980, H = 220, L = 44, R = 16, T = 12, B = 28;
+  if (rows.length < 2) { const p = document.createElement("p"); p.className = "sub";
+    p.textContent = "The trend line appears after two daily snapshots."; return p; }
+  const xs = rows.map((r) => new Date(r.day + "T00:00:00")), ys = rows.map((r) => r.open_postings);
+  const x0 = +xs[0], x1 = +xs[xs.length - 1], yMax = Math.max(...ys) * 1.1 || 1;
+  const sx = (d) => L + ((+d - x0) / Math.max(1, x1 - x0)) * (W - L - R), sy = (v) => T + (1 - v / yMax) * (H - T - B);
+  const pts = rows.map((r, i) => [sx(xs[i]), sy(ys[i])]);
+  const path = pts.map((p, i) => (i ? "L" : "M") + p[0].toFixed(1) + "," + p[1].toFixed(1)).join("");
+  const area = path + `L${pts[pts.length - 1][0]},${H - B}L${pts[0][0]},${H - B}Z`;
+  const ticks = [0, .5, 1].map((f) => Math.round(yMax * f));
+  const fmtD = (d) => d.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`); svg.setAttribute("role", "img");
+  svg.setAttribute("aria-label", "Open postings per day");
+  svg.innerHTML = `${ticks.map((t) => `<line x1="${L}" x2="${W - R}" y1="${sy(t)}" y2="${sy(t)}" stroke="var(--line)"/>
+      <text x="${L - 8}" y="${sy(t) + 4}" text-anchor="end">${fmtInt(t)}</text>`).join("")}
+    <text x="${L}" y="${H - 6}">${fmtD(xs[0])}</text><text x="${W - R}" y="${H - 6}" text-anchor="end">${fmtD(xs[xs.length - 1])}</text>
+    <path d="${area}" fill="var(--wash)"/>
+    <path d="${path}" fill="none" stroke="var(--s1)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+    <line id="xh" y1="${T}" y2="${H - B}" stroke="var(--text-3)" stroke-dasharray="3 3" visibility="hidden"/>
+    <circle id="xd" r="4.5" fill="var(--s1)" stroke="var(--surface)" stroke-width="2" visibility="hidden"/>
+    <rect x="${L}" y="0" width="${W - L - R}" height="${H}" fill="transparent" id="hitbox"/>`;
+  const hb = svg.querySelector("#hitbox"), xh = svg.querySelector("#xh"), xd = svg.querySelector("#xd");
+  hb.addEventListener("mousemove", (e) => {
+    const box = svg.getBoundingClientRect(), mx = (e.clientX - box.left) * (W / box.width);
+    let i = 0; pts.forEach((p, j) => { if (Math.abs(p[0] - mx) < Math.abs(pts[i][0] - mx)) i = j; });
+    xh.setAttribute("x1", pts[i][0]); xh.setAttribute("x2", pts[i][0]); xh.setAttribute("visibility", "visible");
+    xd.setAttribute("cx", pts[i][0]); xd.setAttribute("cy", pts[i][1]); xd.setAttribute("visibility", "visible");
+    showTip(e, `<b>${fmtD(xs[i])}</b><br>${fmtInt(ys[i])} open · ${fmtInt(rows[i].new_postings)} new`);
+  });
+  hb.addEventListener("mouseleave", () => { xh.setAttribute("visibility", "hidden"); xd.setAttribute("visibility", "hidden"); hideTip(); });
+  return svg;
+}
+
+function card(title, sub, node, wide) {
+  const c = document.createElement("section"); c.className = "card" + (wide ? " wide" : "");
+  c.innerHTML = `<h2>${title}</h2><p class="sub">${sub}</p>`; c.append(node); return c;
+}
+
+async function main() {
+  let d;
+  try { d = await (await fetch("data.json", { cache: "no-store" })).json(); }
+  catch { $("#app").innerHTML = `<p class="err">The latest snapshot isn't available yet.</p>`; return; }
+  const k = d.kpis[0] || {}, f = (d.skill_flags || [])[0] || {};
+  const asOf = k.as_of ? new Date(k.as_of + "T00:00:00").toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" }) : "–";
+  const app = $("#app"); app.innerHTML = "";
+  app.insertAdjacentHTML("beforeend", `
+    <div class="hero"><div><div class="num">${fmtInt(num(k.open_postings))}</div><div class="lbl">open data-engineering postings in India</div></div>
+      <div class="status"><span class="dot" aria-hidden="true"></span>Quality checks passed · data as of ${asOf}</div></div>
+    <div class="kpis">
+      <div class="kpi"><div class="v">${fmtInt(num(k.companies))}</div><div class="l">hiring companies</div></div>
+      <div class="kpi"><div class="v">${num(k.median_years) === null ? "–" : num(k.median_years) + " yrs"}</div><div class="l">median experience asked</div></div>
+      <div class="kpi"><div class="v">${fmtPct(num(f.databricks_share))}</div><div class="l">ask for Databricks</div></div>
+      <div class="kpi"><div class="v">${fmtPct(num(f.genai_share))}</div><div class="l">ask for GenAI or Genie</div></div>
+      <div class="kpi"><div class="v">${fmtPct(num(k.strong_fit_share))}</div><div class="l">strong fit for my profile</div></div>
+    </div>`);
+  const grid = document.createElement("div"); grid.className = "grid"; app.append(grid);
+
+  const daily = (d.daily || []).map((r) => ({ day: r.day, open_postings: num(r.open_postings), new_postings: num(r.new_postings) }));
+  const lc = card("Open postings per day", "Postings live on career boards each morning", lineChart(daily), true);
+  lc.insertAdjacentHTML("beforeend", `<details><summary>Show as table</summary><div class="table-wrap"><table>
+      <tr><th>Day</th><th>Open</th><th>New</th></tr>${daily.map((r) => `<tr><td>${r.day}</td><td class="n">${fmtInt(r.open_postings)}</td><td class="n">${fmtInt(r.new_postings)}</td></tr>`).join("")}</table></div></details>`);
+  grid.append(lc);
+
+  const skills = (d.skills || []).map((r) => ({ ...r, postings: num(r.postings) }));
+  const colorOf = (r) => (STATUS.find((s) => s[0] === r.status) || STATUS[2])[1];
+  const sc = card("Most-required skills", "Open postings listing the skill as required. Colour shows whether it's on my profile.",
+    hbars(skills, { label: "skill", value: "postings", color: colorOf,
+      tipFn: (r) => `<b>${esc(r.skill)}</b><br>${fmtInt(r.postings)} postings · ${esc(r.status)}` }));
+  sc.querySelector(".sub").insertAdjacentHTML("afterend", `<div class="legend">${STATUS.map(([n, c]) => `<span><i style="background:${c}"></i>${n}</span>`).join("")}</div>`);
+  grid.append(sc);
+
+  const side = document.createElement("div"); side.className = "card"; side.style.display = "grid"; side.style.gap = "28px";
+  side.append(card("Open postings by city", "", hbars((d.cities || []).map((r) => ({ ...r, postings: num(r.postings) })), { label: "city", value: "postings" })));
+  side.append(card("Open postings by domain", "Industry, as extracted from the description", hbars((d.domains || []).map((r) => ({ ...r, postings: num(r.postings) })), { label: "domain", value: "postings" })));
+  grid.append(side);
+
+  const roles = d.roles || [];
+  const t = document.createElement("div"); t.className = "table-wrap";
+  t.innerHTML = `<table><tr><th>Company</th><th>Role</th><th>City</th><th style="text-align:right">Fit</th></tr>${roles.map((r) =>
+    `<tr><td>${esc(r.company)}</td><td>${r.url ? `<a href="${esc(r.url)}" rel="noopener" target="_blank">${esc(r.title)}</a>` : esc(r.title)}</td><td>${esc(r.city)}</td><td class="n">${fmtInt(num(r.fit_score))}</td></tr>`).join("")}</table>`;
+  grid.append(card("Best-matching open roles", "Fit score 0–100 against my profile: required skills 55%, nice-to-have 15%, experience 15%, location 10%, domain 5%", t, true));
+  app.insertAdjacentHTML("beforeend", `<p class="sub" style="margin-top:20px">Snapshot generated ${esc(d.generated_at || "")} UTC.</p>`);
+}
+main();
+</script>
+</body>
+</html>

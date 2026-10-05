@@ -1,0 +1,33 @@
+# Declarative Automation Bundle (formerly Databricks Asset Bundle): everything deploys together.
+#   databricks bundle validate -t prod
+#   databricks bundle deploy   -t prod        (CI does this on every push to main)
+bundle:
+  name: jobpilot
+
+include:
+  - resources/*.yml
+
+variables:
+  catalog:
+    description: Unity Catalog catalog (Free Edition uses 'workspace')
+    default: workspace
+  schema:
+    default: jobpilot
+  llm_endpoint:
+    description: Chat model endpoint used by ai_query (see Serving in your workspace)
+    default: databricks-meta-llama-3-3-70b-instruct
+  warehouse_id:
+    description: SQL warehouse for the dashboard and the app
+    lookup:
+      warehouse: Serverless Starter Warehouse
+  alert_email:
+    description: Where failure emails go
+    default: ${workspace.current_user.userName}
+
+targets:
+  # One target: Free Edition has a single workspace. CI deploys it on every push to main.
+  prod:
+    default: true
+    workspace:
+      host: https://dbc-6de1175c-93ac.cloud.databricks.com
+      root_path: /Workspace/Users/${workspace.current_user.userName}/.bundle/${bundle.name}/prod

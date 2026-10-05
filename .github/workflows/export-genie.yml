@@ -1,0 +1,32 @@
+name: export-genie
+# Pull the Genie Agent built in the UI into the bundle, so it's versioned and deployed as code.
+on:
+  workflow_dispatch:
+    inputs:
+      space_id:
+        description: Genie Agent ID (from its URL .../genie/rooms/<id>)
+        required: true
+
+permissions: {contents: write}
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    env:
+      DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+      DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: databricks/setup-cli@main
+      - name: Generate bundle config from the live Genie Agent
+        run: |
+          databricks bundle generate genie-space --existing-id "${{ inputs.space_id }}" \
+            --key job_market_genie --force
+      - name: Commit
+        run: |
+          git config user.name "jobpilot-bot"
+          git config user.email "jobpilot-bot@users.noreply.github.com"
+          git add resources/ src/ genie/ 2>/dev/null || true
+          git add -A
+          git diff --cached --quiet || git commit -m "chore: export Genie Agent to bundle"
+          git push

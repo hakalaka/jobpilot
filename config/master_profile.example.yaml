@@ -1,0 +1,104 @@
+# EXAMPLE master profile (committed). Your real one, with contact details, lives in
+# /Volumes/<catalog>/<schema>/private/master_profile.yaml and is never committed.
+#
+# Master profile: the single source of truth for every tailored resume.
+#
+# RULE: only put things here that are TRUE and that you can defend in an interview.
+# The tailoring step may reorder, select and lightly reword these bullets,
+# but guardrails reject any output that adds numbers, tools or claims not found here.
+
+name: Piyush Chavan
+headline_default: Data Engineer | Databricks Lakehouse | Databricks Genie
+location: Bengaluru, India
+email: you@example.com
+phone: ""
+linkedin: ""            # add your LinkedIn URL
+total_years: 5          # full-time data experience since Jul 2021
+preferred_locations: [bengaluru, bangalore, remote, india]
+target_domains: [healthcare, life sciences, insurance, financial services, banking, consulting]
+
+# Canonical skills you can defend. The scorer matches job requirements against these.
+skills:
+  databricks: [databricks, unity catalog, delta lake, lakeflow jobs, databricks workflows, sql warehouse,
+               databricks asset bundles, databricks apps, databricks dashboards, genie, genie code, liquid clustering]
+  engineering: [python, sql, pyspark, spark, spark sql, etl, elt, medallion architecture, data modelling,
+                dimensional modelling, scd, data quality, performance tuning, incremental loads]
+  ai: [llm, mcp, generative ai, natural language to sql, semantic layer]
+  cloud: [azure, aws]
+  warehouse: [snowflake, informatica iics]
+  delivery: [git, ci/cd, release management, agile, technical documentation, production support,
+             defect management, rfp, stakeholder management, mentoring]
+  bi: [power bi, quicksight]
+  domain: [healthcare, medicaid, claims, phi, hipaa, financial services]
+
+# Used to fill the Core Skills line when the tailored list is short (one page has room for ~14).
+core_skills_default: [Databricks, PySpark, Spark SQL, Delta Lake, Unity Catalog, Genie, Lakeflow Jobs,
+                      Databricks Asset Bundles, Python, SQL, Medallion Architecture, Data Modelling, Azure, AWS]
+
+# Skills you are learning. Shown as gaps, never claimed on the resume.
+learning: [structured streaming, auto loader, lakeflow declarative pipelines, delta live tables, airflow, kafka]
+
+summary_facts:
+  - 5+ years in data engineering across KPMG and Merkle
+  - Delivering a US Medicaid healthcare programme on Databricks at KPMG
+  - Multiple Genie Spaces (now Genie Agents) in production for business users
+  - Recognised at KPMG for tenacity in delivery
+
+experience:
+  - id: kpmg
+    title: Data Engineer
+    company: KPMG Global Services
+    location: Bengaluru
+    dates: Nov 2024 - Present
+    bullets:
+      - id: kpmg_pipelines
+        tags: [databricks, pyspark, medallion architecture, unity catalog, healthcare, claims, phi, etl]
+        text: Built end-to-end PySpark pipelines standardising Medicaid claims, provider, pharmacy and RHT data through a Medallion architecture into governed Gold tables, with Unity Catalog column-level PHI security and lineage.
+      - id: kpmg_genie
+        tags: [genie, databricks, natural language to sql, semantic layer, llm, stakeholder management]
+        text: Deployed multiple Genie Spaces over Gold tables, curating instructions, example SQL and business glossaries so stakeholders self-serve instead of raising ad-hoc report requests.
+      - id: kpmg_genie_accelerator
+        tags: [genie, genie code, databricks apps, unity catalog, llm, semantic layer, generative ai]
+        text: Designing an agentic tool on Genie Code, Unity Catalog functions and a Databricks App that profiles Gold tables and auto-generates 70-80% of a Genie Space semantic layer for engineer review.
+      - id: kpmg_perf
+        tags: [performance tuning, liquid clustering, databricks, spark, lakeflow jobs, data quality]
+        text: Cut compute cost by 15% using Liquid Clustering, Z-Ordering, partition pruning and cluster right-sizing; built multi-task Workflows with retries and alerting, plus dashboards tracking data quality and job health.
+      - id: kpmg_release
+        tags: [databricks asset bundles, release management, ci/cd, git]
+        text: Standardised deployments with Databricks Asset Bundles, promoting jobs, clusters and permissions across Dev, QA, STG and Prod with version control and environment parity.
+      - id: kpmg_poc
+        tags: [genie, technical documentation, stakeholder management]
+        text: Built a Genie proof of concept for US-based KPMG teams and authored the technical guide for integrating Genie with Microsoft Teams.
+      - id: kpmg_accelerators
+        tags: [llm, generative ai, python, databricks, mcp]
+        text: Built an AI-assisted data mapping tool and a synthetic healthcare claims generator (LLM and YData paths); setting up MCP servers that expose governed data to LLM agents.
+      - id: kpmg_leadership
+        tags: [mentoring, rfp, stakeholder management, power bi, quicksight]
+        text: Mentored two new joiners through the buddy programme; contribute Databricks architecture sections to client RFPs and delivered Power BI and QuickSight visuals for an NYC RFP.
+  - id: merkle
+    title: Software Engineer / Associate Software Engineer
+    company: Merkle (dentsu)
+    location: Mumbai
+    dates: Jul 2021 - Oct 2024
+    bullets:
+      - id: merkle_cxm
+        tags: [snowflake, informatica iics, etl, data modelling, healthcare, financial services]
+        text: Built and maintained CXM data solutions for global healthcare and financial services clients on Snowflake and Informatica IICS, owning schema design and load performance.
+      - id: merkle_uptime
+        tags: [production support, sql, python, defect management, performance tuning]
+        text: Maintained 99.9% uptime against client SLAs, resolving production incidents and defects and tuning SQL stored procedures and Python notebooks.
+      - id: merkle_docs
+        tags: [technical documentation, production support, mentoring]
+        text: Authored technical documentation and resolution procedures, reducing repeat escalations and onboarding time for new team members.
+
+certifications:
+  - Databricks Certified Data Engineer Associate
+  - Claude Certified Architect - Foundations (Anthropic), 2026
+
+education:
+  - degree: Post Graduate Diploma in Data Analytics
+    school: Imarticus Learning, Pune
+    year: June 2021
+  - degree: B.E.
+    school: Marathwada Mitra Mandal's College of Engineering, Pune
+    year: June 2019

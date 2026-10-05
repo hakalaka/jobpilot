@@ -1,0 +1,60 @@
+# Candidate career boards. The "discover-boards" GitHub Action probes each token on Greenhouse
+# and Lever, keeps the ones that answer, and writes the verified list to config/sources.yaml.
+# Add companies freely: a wrong token just gets reported as "not found".
+# A token is the last part of the careers URL: job-boards.greenhouse.io/<token> or jobs.lever.co/<token>
+candidates:
+  # Data platforms and cloud
+  - {company: Databricks, token: databricks}
+  - {company: MongoDB, token: mongodb}
+  - {company: Elastic, token: elastic}
+  - {company: Confluent, token: confluent}
+  - {company: Okta, token: okta}
+  - {company: Twilio, token: twilio}
+  - {company: Cloudflare, token: cloudflare}
+  - {company: Rubrik, token: rubrik}
+  - {company: Zscaler, token: zscaler}
+  - {company: ThoughtSpot, token: thoughtspot}
+  - {company: Harness, token: harnessinc}
+  - {company: Druva, token: druva}
+  - {company: Hevo Data, token: hevodata}
+  - {company: Postman, token: postman}
+  - {company: BrowserStack, token: browserstack}
+  - {company: Atlan, token: atlan}
+  - {company: Fivetran, token: fivetran}
+  - {company: Sigmoid, token: sigmoid}
+  - {company: Tiger Analytics, token: tigeranalytics}
+  # Fintech and financial services
+  - {company: Stripe, token: stripe}
+  - {company: Coinbase, token: coinbase}
+  - {company: Capco, token: capco}
+  - {company: Razorpay, token: razorpaysoftwareprivatelimited}
+  - {company: PhonePe, token: phonepe}
+  - {company: CRED, token: cred}
+  - {company: Groww, token: groww}
+  - {company: Zeta, token: zeta}
+  - {company: Nium, token: nium}
+  - {company: slice, token: sliceit}
+  - {company: Jupiter, token: jupiter}
+  - {company: Acko, token: acko}
+  # Healthcare and life sciences
+  - {company: Innovaccer, token: innovaccer}
+  - {company: Veeva Systems, token: veeva}
+  - {company: Zocdoc, token: zocdoc}
+  - {company: Practo, token: practo}
+  - {company: HealthifyMe, token: healthifyme}
+  - {company: Komodo Health, token: komodohealth}
+  - {company: Cloudphysician, token: cloudphysician}
+  # Consumer and SaaS with Bengaluru engineering
+  - {company: Roku, token: roku}
+  - {company: Meesho, token: meesho}
+  - {company: ShareChat, token: sharechat}
+  - {company: Swiggy, token: swiggy}
+  - {company: Chargebee, token: chargebee}
+  - {company: Whatfix, token: whatfix}
+  - {company: Mindtickle, token: mindtickle}
+  - {company: Observe.AI, token: observeai}
+  - {company: HackerRank, token: hackerrank}
+  - {company: Instawork, token: instawork}
+  - {company: Degreed, token: degreed}
+  - {company: Amagi, token: amagi}
+  - {company: Neuron7, token: neuron7}

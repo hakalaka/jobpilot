@@ -1,0 +1,6 @@
+# Written by tools/discover_boards.py (discover-boards workflow). Edit filters freely;
+# edit config/board_candidates.yaml to add companies, then re-run discovery.
+title_keywords: [data engineer, databricks, analytics engineer, big data, data platform, lakehouse, etl, data architect]
+locations: [bengaluru, bangalore, india, remote - india, hyderabad, pune, mumbai, gurugram, gurgaon, chennai, noida]
+boards:
+  - {source: greenhouse, token: databricks, company: Databricks}

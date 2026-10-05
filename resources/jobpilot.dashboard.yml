@@ -1,0 +1,7 @@
+resources:
+  dashboards:
+    job_market:
+      display_name: "JobPilot: India data-engineering job market"
+      file_path: ../dashboards/job_market.lvdash.json
+      warehouse_id: ${var.warehouse_id}
+      embed_credentials: true          # viewers in the account see it without table grants

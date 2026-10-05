@@ -1,0 +1,459 @@
+{
+ "quality": [
+  {
+   "failed_blocking": "0",
+   "last_check": "2026-10-05T02:10:00"
+  }
+ ],
+ "kpis": [
+  {
+   "open_postings": "526",
+   "companies": "41",
+   "median_years": "5.0",
+   "strong_fit_share": "0.27",
+   "as_of": "2026-10-05"
+  }
+ ],
+ "skill_flags": [
+  {
+   "databricks_share": "0.38",
+   "genai_share": "0.16"
+  }
+ ],
+ "daily": [
+  {
+   "day": "2026-08-22",
+   "open_postings": "370",
+   "new_postings": "12"
+  },
+  {
+   "day": "2026-08-23",
+   "open_postings": "384",
+   "new_postings": "22"
+  },
+  {
+   "day": "2026-08-24",
+   "open_postings": "377",
+   "new_postings": "16"
+  },
+  {
+   "day": "2026-08-25",
+   "open_postings": "373",
+   "new_postings": "20"
+  },
+  {
+   "day": "2026-08-26",
+   "open_postings": "390",
+   "new_postings": "23"
+  },
+  {
+   "day": "2026-08-27",
+   "open_postings": "410",
+   "new_postings": "24"
+  },
+  {
+   "day": "2026-08-28",
+   "open_postings": "418",
+   "new_postings": "20"
+  },
+  {
+   "day": "2026-08-29",
+   "open_postings": "429",
+   "new_postings": "22"
+  },
+  {
+   "day": "2026-08-30",
+   "open_postings": "421",
+   "new_postings": "11"
+  },
+  {
+   "day": "2026-08-31",
+   "open_postings": "422",
+   "new_postings": "22"
+  },
+  {
+   "day": "2026-09-01",
+   "open_postings": "426",
+   "new_postings": "20"
+  },
+  {
+   "day": "2026-09-02",
+   "open_postings": "443",
+   "new_postings": "25"
+  },
+  {
+   "day": "2026-09-03",
+   "open_postings": "431",
+   "new_postings": "12"
+  },
+  {
+   "day": "2026-09-04",
+   "open_postings": "420",
+   "new_postings": "9"
+  },
+  {
+   "day": "2026-09-05",
+   "open_postings": "433",
+   "new_postings": "17"
+  },
+  {
+   "day": "2026-09-06",
+   "open_postings": "453",
+   "new_postings": "26"
+  },
+  {
+   "day": "2026-09-07",
+   "open_postings": "441",
+   "new_postings": "10"
+  },
+  {
+   "day": "2026-09-08",
+   "open_postings": "434",
+   "new_postings": "6"
+  },
+  {
+   "day": "2026-09-09",
+   "open_postings": "427",
+   "new_postings": "5"
+  },
+  {
+   "day": "2026-09-10",
+   "open_postings": "424",
+   "new_postings": "20"
+  },
+  {
+   "day": "2026-09-11",
+   "open_postings": "436",
+   "new_postings": "28"
+  },
+  {
+   "day": "2026-09-12",
+   "open_postings": "446",
+   "new_postings": "27"
+  },
+  {
+   "day": "2026-09-13",
+   "open_postings": "441",
+   "new_postings": "17"
+  },
+  {
+   "day": "2026-09-14",
+   "open_postings": "452",
+   "new_postings": "19"
+  },
+  {
+   "day": "2026-09-15",
+   "open_postings": "461",
+   "new_postings": "16"
+  },
+  {
+   "day": "2026-09-16",
+   "open_postings": "459",
+   "new_postings": "6"
+  },
+  {
+   "day": "2026-09-17",
+   "open_postings": "469",
+   "new_postings": "20"
+  },
+  {
+   "day": "2026-09-18",
+   "open_postings": "465",
+   "new_postings": "13"
+  },
+  {
+   "day": "2026-09-19",
+   "open_postings": "477",
+   "new_postings": "25"
+  },
+  {
+   "day": "2026-09-20",
+   "open_postings": "475",
+   "new_postings": "18"
+  },
+  {
+   "day": "2026-09-21",
+   "open_postings": "470",
+   "new_postings": "17"
+  },
+  {
+   "day": "2026-09-22",
+   "open_postings": "465",
+   "new_postings": "16"
+  },
+  {
+   "day": "2026-09-23",
+   "open_postings": "471",
+   "new_postings": "23"
+  },
+  {
+   "day": "2026-09-24",
+   "open_postings": "483",
+   "new_postings": "23"
+  },
+  {
+   "day": "2026-09-25",
+   "open_postings": "494",
+   "new_postings": "15"
+  },
+  {
+   "day": "2026-09-26",
+   "open_postings": "484",
+   "new_postings": "13"
+  },
+  {
+   "day": "2026-09-27",
+   "open_postings": "501",
+   "new_postings": "26"
+  },
+  {
+   "day": "2026-09-28",
+   "open_postings": "514",
+   "new_postings": "27"
+  },
+  {
+   "day": "2026-09-29",
+   "open_postings": "514",
+   "new_postings": "22"
+  },
+  {
+   "day": "2026-09-30",
+   "open_postings": "530",
+   "new_postings": "23"
+  },
+  {
+   "day": "2026-10-01",
+   "open_postings": "533",
+   "new_postings": "27"
+  },
+  {
+   "day": "2026-10-02",
+   "open_postings": "520",
+   "new_postings": "11"
+  },
+  {
+   "day": "2026-10-03",
+   "open_postings": "531",
+   "new_postings": "23"
+  },
+  {
+   "day": "2026-10-04",
+   "open_postings": "538",
+   "new_postings": "14"
+  },
+  {
+   "day": "2026-10-05",
+   "open_postings": "526",
+   "new_postings": "7"
+  }
+ ],
+ "skills": [
+  {
+   "skill": "sql",
+   "status": "Have it",
+   "postings": "312"
+  },
+  {
+   "skill": "python",
+   "status": "Have it",
+   "postings": "298"
+  },
+  {
+   "skill": "spark",
+   "status": "Have it",
+   "postings": "241"
+  },
+  {
+   "skill": "aws",
+   "status": "Have it",
+   "postings": "188"
+  },
+  {
+   "skill": "azure",
+   "status": "Have it",
+   "postings": "171"
+  },
+  {
+   "skill": "databricks",
+   "status": "Have it",
+   "postings": "164"
+  },
+  {
+   "skill": "airflow",
+   "status": "Learning",
+   "postings": "151"
+  },
+  {
+   "skill": "kafka",
+   "status": "Learning",
+   "postings": "118"
+  },
+  {
+   "skill": "snowflake",
+   "status": "Have it",
+   "postings": "109"
+  },
+  {
+   "skill": "data modelling",
+   "status": "Have it",
+   "postings": "104"
+  },
+  {
+   "skill": "dbt",
+   "status": "Gap",
+   "postings": "97"
+  },
+  {
+   "skill": "gcp",
+   "status": "Gap",
+   "postings": "82"
+  },
+  {
+   "skill": "etl",
+   "status": "Have it",
+   "postings": "80"
+  },
+  {
+   "skill": "delta lake",
+   "status": "Have it",
+   "postings": "71"
+  },
+  {
+   "skill": "scala",
+   "status": "Gap",
+   "postings": "66"
+  },
+  {
+   "skill": "structured streaming",
+   "status": "Learning",
+   "postings": "58"
+  },
+  {
+   "skill": "terraform",
+   "status": "Gap",
+   "postings": "44"
+  },
+  {
+   "skill": "unity catalog",
+   "status": "Have it",
+   "postings": "39"
+  },
+  {
+   "skill": "docker",
+   "status": "Gap",
+   "postings": "35"
+  },
+  {
+   "skill": "llm",
+   "status": "Have it",
+   "postings": "31"
+  }
+ ],
+ "cities": [
+  {
+   "city": "Bengaluru",
+   "postings": "176"
+  },
+  {
+   "city": "Hyderabad",
+   "postings": "71"
+  },
+  {
+   "city": "Pune",
+   "postings": "48"
+  },
+  {
+   "city": "Delhi NCR",
+   "postings": "39"
+  },
+  {
+   "city": "Remote",
+   "postings": "31"
+  },
+  {
+   "city": "Mumbai",
+   "postings": "22"
+  },
+  {
+   "city": "Chennai",
+   "postings": "19"
+  },
+  {
+   "city": "Other",
+   "postings": "8"
+  }
+ ],
+ "domains": [
+  {
+   "domain": "fintech",
+   "postings": "92"
+  },
+  {
+   "domain": "saas",
+   "postings": "81"
+  },
+  {
+   "domain": "healthcare",
+   "postings": "54"
+  },
+  {
+   "domain": "e-commerce",
+   "postings": "43"
+  },
+  {
+   "domain": "consulting",
+   "postings": "37"
+  },
+  {
+   "domain": "media",
+   "postings": "21"
+  },
+  {
+   "domain": "logistics",
+   "postings": "17"
+  }
+ ],
+ "roles": [
+  {
+   "company": "HealthCo",
+   "title": "Senior Data Engineer - Databricks",
+   "city": "Bengaluru",
+   "fit_score": "93",
+   "recommendation": "APPLY",
+   "url": "https://example.com/job"
+  },
+  {
+   "company": "DataCorp",
+   "title": "Data Engineer II (Lakehouse)",
+   "city": "Bengaluru",
+   "fit_score": "88",
+   "recommendation": "APPLY",
+   "url": "https://example.com/job"
+  },
+  {
+   "company": "PayFast",
+   "title": "Data Engineer, Platform",
+   "city": "Bengaluru",
+   "fit_score": "84",
+   "recommendation": "APPLY",
+   "url": "https://example.com/job"
+  },
+  {
+   "company": "MedAnalytics",
+   "title": "Lead Data Engineer",
+   "city": "Hyderabad",
+   "fit_score": "81",
+   "recommendation": "APPLY",
+   "url": "https://example.com/job"
+  },
+  {
+   "company": "CloudOne",
+   "title": "Analytics Engineer",
+   "city": "Remote",
+   "fit_score": "77",
+   "recommendation": "APPLY",
+   "url": "https://example.com/job"
+  }
+ ],
+ "generated_at": "2026-10-05T03:31+00:00"
+}

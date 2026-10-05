@@ -1,0 +1,36 @@
+name: daily-ingest
+# 07:00 IST daily: snapshot every verified career board, land it in the Unity Catalog volume,
+# and start the Databricks job. GitHub's runners have open internet; Free Edition serverless doesn't.
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "30 1 * * *"
+
+concurrency: {group: daily-ingest, cancel-in-progress: false}
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    env:
+      DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+      DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+      LANDING: dbfs:/Volumes/workspace/jobpilot/raw/inbox/ats/
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.11"}
+      - run: pip install pyyaml
+      - name: Fetch today's postings
+        run: python tools/fetch_jobs.py | tee out_log.txt
+      - run: tail -n 1 out_log.txt >> "$GITHUB_STEP_SUMMARY"
+      - uses: databricks/setup-cli@main
+      - name: Land file in the volume
+        run: |
+          f=$(ls out/ats_*.jsonl)
+          if [ -s "$f" ]; then databricks fs cp "$f" "$LANDING"; else echo "empty snapshot, nothing to land"; fi
+      - name: Start the pipeline job
+        run: |
+          id=$(databricks jobs list --name "jobpilot-daily" --output json | jq -r '.[0].job_id')
+          test -n "$id" && test "$id" != "null" || { echo "job jobpilot-daily not found: deploy the bundle first"; exit 1; }
+          databricks jobs run-now "$id" --no-wait
+          echo "Started job $id" >> "$GITHUB_STEP_SUMMARY"

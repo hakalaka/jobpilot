@@ -1,0 +1,9 @@
+{"jobs": [
+ {"id": 101, "title": "Senior Data Engineer - Databricks", "updated_at": "2026-09-20T10:00:00-04:00",
+  "location": {"name": "Bengaluru, India"}, "absolute_url": "https://boards.greenhouse.io/acme/jobs/101",
+  "content": "&lt;p&gt;We need a &lt;strong&gt;Data Engineer&lt;/strong&gt;.&lt;/p&gt;&lt;ul&gt;&lt;li&gt;5+ years&lt;/li&gt;&lt;li&gt;Azure Databricks, PySpark, Unity Catalog&lt;/li&gt;&lt;/ul&gt;",
+  "departments": [{"name": "Data"}], "offices": [{"name": "Bengaluru"}]},
+ {"id": 102, "title": "Product Designer", "updated_at": "2026-09-21T10:00:00-04:00",
+  "location": {"name": "Remote - US"}, "absolute_url": "https://boards.greenhouse.io/acme/jobs/102",
+  "content": "&lt;p&gt;Design things&lt;/p&gt;"}
+], "meta": {"total": 2}}

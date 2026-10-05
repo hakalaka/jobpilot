@@ -1,0 +1,15 @@
+resources:
+  pipelines:
+    jobpilot_ingest:
+      name: jobpilot-ingest
+      catalog: ${var.catalog}
+      schema: ${resources.schemas.jobpilot.name}   # also orders deploy: schema first
+      serverless: true
+      photon: true
+      channel: CURRENT
+      continuous: false                 # triggered by the daily job, not always on
+      libraries:
+        - file:
+            path: ../pipelines/ingest.sql
+      configuration:
+        landing_path: /Volumes/${var.catalog}/${var.schema}/raw/inbox

@@ -1,0 +1,1452 @@
+{
+  "datasets": [
+    {
+      "name": "ds_market",
+      "displayName": "Job market (one row per posting)",
+      "queryLines": [
+        "SELECT *, CASE WHEN recommendation = 'APPLY' THEN 1.0 ELSE 0.0 END AS is_strong_fit\n        FROM workspace.jobpilot.v_job_market"
+      ]
+    },
+    {
+      "name": "ds_daily",
+      "displayName": "Open postings per day",
+      "queryLines": [
+        "SELECT d.snapshot_day, d.company, d.open_postings, d.new_postings\n        FROM workspace.jobpilot.gold_postings_daily d"
+      ]
+    },
+    {
+      "name": "ds_skills",
+      "displayName": "Top 20 required skills in open postings",
+      "queryLines": [
+        "WITH s AS (\n          SELECT d.job_key, d.skill, m.city, m.domain,\n                 CASE WHEN d.in_profile THEN 'Have it' WHEN d.on_learning_list THEN 'Learning' ELSE 'Gap' END AS skill_status\n          FROM workspace.jobpilot.gold_skill_demand d JOIN workspace.jobpilot.v_job_market m USING (job_key)\n          WHERE m.is_open AND d.requirement = 'must')\n        SELECT * FROM s WHERE skill IN (\n          SELECT skill FROM s GROUP BY skill ORDER BY COUNT(DISTINCT job_key) DESC LIMIT 20)"
+      ]
+    },
+    {
+      "name": "ds_gaps",
+      "displayName": "Top 15 required skills I don't list",
+      "queryLines": [
+        "WITH s AS (\n          SELECT d.job_key, d.skill, m.city, m.domain,\n                 CASE WHEN d.on_learning_list THEN 'Learning' ELSE 'Gap' END AS skill_status\n          FROM workspace.jobpilot.gold_skill_demand d JOIN workspace.jobpilot.v_job_market m USING (job_key)\n          WHERE m.is_open AND d.requirement = 'must' AND NOT d.in_profile)\n        SELECT * FROM s WHERE skill IN (\n          SELECT skill FROM s GROUP BY skill ORDER BY COUNT(DISTINCT job_key) DESC LIMIT 15)"
+      ]
+    },
+    {
+      "name": "ds_skill_flags",
+      "displayName": "Postings asking for Databricks or GenAI",
+      "queryLines": [
+        "SELECT m.job_key, m.city, m.domain,\n               MAX(CASE WHEN d.skill = 'databricks' THEN 1 ELSE 0 END) AS wants_databricks,\n               MAX(CASE WHEN d.skill IN ('genie', 'llm', 'generative ai') THEN 1 ELSE 0 END) AS wants_genai\n        FROM workspace.jobpilot.v_job_market m LEFT JOIN workspace.jobpilot.gold_skill_demand d USING (job_key)\n        WHERE m.is_open GROUP BY m.job_key, m.city, m.domain"
+      ]
+    },
+    {
+      "name": "ds_quality",
+      "displayName": "Latest quality checks",
+      "queryLines": [
+        "SELECT check_name, value, threshold, passed, blocking, detail, checked_at\n        FROM workspace.jobpilot.ops_quality_log\n        QUALIFY ROW_NUMBER() OVER (PARTITION BY check_name ORDER BY checked_at DESC) = 1"
+      ]
+    },
+    {
+      "name": "ds_loads",
+      "displayName": "Bronze rows loaded per day",
+      "queryLines": [
+        "SELECT snapshot_day, source, COUNT(*) AS rows_loaded, COUNT(DISTINCT job_key) AS postings\n        FROM workspace.jobpilot.bronze_job_snapshots GROUP BY snapshot_day, source"
+      ]
+    }
+  ],
+  "pages": [
+    {
+      "name": "market",
+      "displayName": "Market overview",
+      "layout": [
+        {
+          "widget": {
+            "name": "text_01",
+            "multilineTextboxSpec": {
+              "lines": [
+                "# India data-engineering job market"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 6,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "text_02",
+            "multilineTextboxSpec": {
+              "lines": [
+                "Live from company career boards, refreshed daily by a Lakeflow pipeline. Requirements extracted with `ai_query`; fit scored against my profile."
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 1,
+            "width": 6,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "filter_03",
+            "queries": [
+              {
+                "name": "filter_city_ds_market",
+                "query": {
+                  "datasetName": "ds_market",
+                  "disaggregated": false,
+                  "fields": [
+                    {
+                      "name": "city",
+                      "expression": "`city`"
+                    }
+                  ]
+                }
+              },
+              {
+                "name": "filter_city_ds_skills",
+                "query": {
+                  "datasetName": "ds_skills",
+                  "disaggregated": false,
+                  "fields": [
+                    {
+                      "name": "city",
+                      "expression": "`city`"
+                    }
+                  ]
+                }
+              },
+              {
+                "name": "filter_city_ds_gaps",
+                "query": {
+                  "datasetName": "ds_gaps",
+                  "disaggregated": false,
+                  "fields": [
+                    {
+                      "name": "city",
+                      "expression": "`city`"
+                    }
+                  ]
+                }
+              },
+              {
+                "name": "filter_city_ds_skill_flags",
+                "query": {
+                  "datasetName": "ds_skill_flags",
+                  "disaggregated": false,
+                  "fields": [
+                    {
+                      "name": "city",
+                      "expression": "`city`"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-multi-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "city",
+                    "displayName": "City",
+                    "queryName": "filter_city_ds_market"
+                  },
+                  {
+                    "fieldName": "city",
+                    "displayName": "City",
+                    "queryName": "filter_city_ds_skills"
+                  },
+                  {
+                    "fieldName": "city",
+                    "displayName": "City",
+                    "queryName": "filter_city_ds_gaps"
+                  },
+                  {
+                    "fieldName": "city",
+                    "displayName": "City",
+                    "queryName": "filter_city_ds_skill_flags"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "City"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 2,
+            "width": 2,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "filter_04",
+            "queries": [
+              {
+                "name": "filter_domain_ds_market",
+                "query": {
+                  "datasetName": "ds_market",
+                  "disaggregated": false,
+                  "fields": [
+                    {
+                      "name": "domain",
+                      "expression": "`domain`"
+                    }
+                  ]
+                }
+              },
+              {
+                "name": "filter_domain_ds_skills",
+                "query": {
+                  "datasetName": "ds_skills",
+                  "disaggregated": false,
+                  "fields": [
+                    {
+                      "name": "domain",
+                      "expression": "`domain`"
+                    }
+                  ]
+                }
+              },
+              {
+                "name": "filter_domain_ds_gaps",
+                "query": {
+                  "datasetName": "ds_gaps",
+                  "disaggregated": false,
+                  "fields": [
+                    {
+                      "name": "domain",
+                      "expression": "`domain`"
+                    }
+                  ]
+                }
+              },
+              {
+                "name": "filter_domain_ds_skill_flags",
+                "query": {
+                  "datasetName": "ds_skill_flags",
+                  "disaggregated": false,
+                  "fields": [
+                    {
+                      "name": "domain",
+                      "expression": "`domain`"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-multi-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "domain",
+                    "displayName": "Domain",
+                    "queryName": "filter_domain_ds_market"
+                  },
+                  {
+                    "fieldName": "domain",
+                    "displayName": "Domain",
+                    "queryName": "filter_domain_ds_skills"
+                  },
+                  {
+                    "fieldName": "domain",
+                    "displayName": "Domain",
+                    "queryName": "filter_domain_ds_gaps"
+                  },
+                  {
+                    "fieldName": "domain",
+                    "displayName": "Domain",
+                    "queryName": "filter_domain_ds_skill_flags"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Domain"
+              }
+            }
+          },
+          "position": {
+            "x": 2,
+            "y": 2,
+            "width": 2,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "kpi_05",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_market",
+                  "fields": [
+                    {
+                      "name": "open_postings",
+                      "expression": "COUNT(DISTINCT `job_key`)"
+                    }
+                  ],
+                  "disaggregated": false,
+                  "filters": [
+                    {
+                      "expression": "`is_open`"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "open_postings",
+                  "displayName": "Open postings"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Open postings"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 3,
+            "width": 1,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "kpi_06",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_market",
+                  "fields": [
+                    {
+                      "name": "companies",
+                      "expression": "COUNT(DISTINCT `company`)"
+                    }
+                  ],
+                  "disaggregated": false,
+                  "filters": [
+                    {
+                      "expression": "`is_open`"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "companies",
+                  "displayName": "Hiring companies"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Hiring companies"
+              }
+            }
+          },
+          "position": {
+            "x": 1,
+            "y": 3,
+            "width": 1,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "kpi_07",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_market",
+                  "fields": [
+                    {
+                      "name": "median_years",
+                      "expression": "MEDIAN(`years_required`)"
+                    }
+                  ],
+                  "disaggregated": false,
+                  "filters": [
+                    {
+                      "expression": "`is_open`"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "median_years",
+                  "displayName": "Median years asked"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Median years asked"
+              }
+            }
+          },
+          "position": {
+            "x": 2,
+            "y": 3,
+            "width": 1,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "kpi_08",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_market",
+                  "fields": [
+                    {
+                      "name": "strong_fit_share",
+                      "expression": "AVG(`is_strong_fit`)"
+                    }
+                  ],
+                  "disaggregated": false,
+                  "filters": [
+                    {
+                      "expression": "`is_open`"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "strong_fit_share",
+                  "displayName": "Strong-fit share",
+                  "format": {
+                    "type": "number-percent",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 0
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Strong-fit share"
+              }
+            }
+          },
+          "position": {
+            "x": 3,
+            "y": 3,
+            "width": 1,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "kpi_09",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_skill_flags",
+                  "fields": [
+                    {
+                      "name": "databricks_share",
+                      "expression": "AVG(`wants_databricks`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "databricks_share",
+                  "displayName": "Share asking for Databricks",
+                  "format": {
+                    "type": "number-percent",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 0
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Share asking for Databricks"
+              }
+            }
+          },
+          "position": {
+            "x": 4,
+            "y": 3,
+            "width": 1,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "kpi_10",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_skill_flags",
+                  "fields": [
+                    {
+                      "name": "genai_share",
+                      "expression": "AVG(`wants_genai`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "genai_share",
+                  "displayName": "Share asking for GenAI",
+                  "format": {
+                    "type": "number-percent",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 0
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Share asking for GenAI"
+              }
+            }
+          },
+          "position": {
+            "x": 5,
+            "y": 3,
+            "width": 1,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "line_11",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_daily",
+                  "fields": [
+                    {
+                      "name": "snapshot_day",
+                      "expression": "`snapshot_day`"
+                    },
+                    {
+                      "name": "open",
+                      "expression": "SUM(`open_postings`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "line",
+              "encodings": {
+                "x": {
+                  "fieldName": "snapshot_day",
+                  "displayName": "Day",
+                  "scale": {
+                    "type": "temporal"
+                  }
+                },
+                "y": {
+                  "fieldName": "open",
+                  "displayName": "Open postings",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                }
+              },
+              "mark": {
+                "colors": [
+                  "#2a78d6"
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Open postings per day"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 5,
+            "width": 3,
+            "height": 4
+          }
+        },
+        {
+          "widget": {
+            "name": "bar_12",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_market",
+                  "fields": [
+                    {
+                      "name": "city",
+                      "expression": "`city`"
+                    },
+                    {
+                      "name": "postings",
+                      "expression": "COUNT(DISTINCT `job_key`)"
+                    }
+                  ],
+                  "disaggregated": false,
+                  "filters": [
+                    {
+                      "expression": "`is_open`"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "postings",
+                  "displayName": "Open postings",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "y": {
+                  "fieldName": "city",
+                  "displayName": "City",
+                  "scale": {
+                    "type": "categorical",
+                    "sort": {
+                      "by": "x-reversed"
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Open postings by city"
+              },
+              "mark": {
+                "colors": [
+                  "#2a78d6"
+                ]
+              }
+            }
+          },
+          "position": {
+            "x": 3,
+            "y": 5,
+            "width": 3,
+            "height": 4
+          }
+        },
+        {
+          "widget": {
+            "name": "bar_13",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_skills",
+                  "fields": [
+                    {
+                      "name": "skill",
+                      "expression": "`skill`"
+                    },
+                    {
+                      "name": "postings",
+                      "expression": "COUNT(DISTINCT `job_key`)"
+                    },
+                    {
+                      "name": "skill_status",
+                      "expression": "`skill_status`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "postings",
+                  "displayName": "Postings requiring it",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "y": {
+                  "fieldName": "skill",
+                  "displayName": "Skill",
+                  "scale": {
+                    "type": "categorical",
+                    "sort": {
+                      "by": "x-reversed"
+                    }
+                  }
+                },
+                "color": {
+                  "fieldName": "skill_status",
+                  "displayName": "My status",
+                  "scale": {
+                    "type": "categorical",
+                    "mappings": [
+                      {
+                        "value": "Have it",
+                        "color": "#2a78d6"
+                      },
+                      {
+                        "value": "Learning",
+                        "color": "#eb6834"
+                      },
+                      {
+                        "value": "Gap",
+                        "color": "#1baf7a"
+                      }
+                    ]
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Top skills in open postings (colour = do I have it?)"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 9,
+            "width": 4,
+            "height": 7
+          }
+        },
+        {
+          "widget": {
+            "name": "bar_14",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_market",
+                  "fields": [
+                    {
+                      "name": "domain",
+                      "expression": "`domain`"
+                    },
+                    {
+                      "name": "postings",
+                      "expression": "COUNT(DISTINCT `job_key`)"
+                    }
+                  ],
+                  "disaggregated": false,
+                  "filters": [
+                    {
+                      "expression": "`is_open`"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "postings",
+                  "displayName": "Open postings",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "y": {
+                  "fieldName": "domain",
+                  "displayName": "Domain",
+                  "scale": {
+                    "type": "categorical",
+                    "sort": {
+                      "by": "x-reversed"
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Open postings by domain"
+              },
+              "mark": {
+                "colors": [
+                  "#2a78d6"
+                ]
+              }
+            }
+          },
+          "position": {
+            "x": 4,
+            "y": 9,
+            "width": 2,
+            "height": 7
+          }
+        },
+        {
+          "widget": {
+            "name": "table_15",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_market",
+                  "fields": [
+                    {
+                      "name": "company",
+                      "expression": "`company`"
+                    },
+                    {
+                      "name": "title",
+                      "expression": "`title`"
+                    },
+                    {
+                      "name": "city",
+                      "expression": "`city`"
+                    },
+                    {
+                      "name": "fit_score",
+                      "expression": "`fit_score`"
+                    },
+                    {
+                      "name": "recommendation",
+                      "expression": "`recommendation`"
+                    },
+                    {
+                      "name": "years_required",
+                      "expression": "`years_required`"
+                    },
+                    {
+                      "name": "url",
+                      "expression": "`url`"
+                    }
+                  ],
+                  "disaggregated": true,
+                  "filters": [
+                    {
+                      "expression": "`is_open`"
+                    },
+                    {
+                      "expression": "`recommendation` <> 'SKIP'"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "company",
+                    "displayName": "Company"
+                  },
+                  {
+                    "fieldName": "title",
+                    "displayName": "Role"
+                  },
+                  {
+                    "fieldName": "city",
+                    "displayName": "City"
+                  },
+                  {
+                    "fieldName": "fit_score",
+                    "displayName": "Fit (0-100)"
+                  },
+                  {
+                    "fieldName": "recommendation",
+                    "displayName": "Fit band"
+                  },
+                  {
+                    "fieldName": "years_required",
+                    "displayName": "Years asked"
+                  },
+                  {
+                    "fieldName": "url",
+                    "displayName": "Link"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Best-matching open roles"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 16,
+            "width": 6,
+            "height": 6
+          }
+        }
+      ],
+      "pageType": "PAGE_TYPE_CANVAS"
+    },
+    {
+      "name": "fit",
+      "displayName": "My fit and gaps",
+      "layout": [
+        {
+          "widget": {
+            "name": "text_16",
+            "multilineTextboxSpec": {
+              "lines": [
+                "# My fit and skill gaps"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 6,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "text_17",
+            "multilineTextboxSpec": {
+              "lines": [
+                "Deterministic fit score per posting: must-have coverage 55%, nice-to-have 15%, years 15%, location 10%, domain 5%. Gaps on my learning list are what I'm studying next."
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 1,
+            "width": 6,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "bar_18",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_market",
+                  "fields": [
+                    {
+                      "name": "recommendation",
+                      "expression": "`recommendation`"
+                    },
+                    {
+                      "name": "postings",
+                      "expression": "COUNT(DISTINCT `job_key`)"
+                    }
+                  ],
+                  "disaggregated": false,
+                  "filters": [
+                    {
+                      "expression": "`is_open`"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "recommendation",
+                  "displayName": "Fit band",
+                  "scale": {
+                    "type": "categorical",
+                    "sort": {
+                      "by": "y-reversed"
+                    }
+                  }
+                },
+                "y": {
+                  "fieldName": "postings",
+                  "displayName": "Open postings",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Open postings by fit band"
+              },
+              "mark": {
+                "colors": [
+                  "#2a78d6"
+                ]
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 2,
+            "width": 2,
+            "height": 5
+          }
+        },
+        {
+          "widget": {
+            "name": "bar_19",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_gaps",
+                  "fields": [
+                    {
+                      "name": "skill",
+                      "expression": "`skill`"
+                    },
+                    {
+                      "name": "postings",
+                      "expression": "COUNT(DISTINCT `job_key`)"
+                    },
+                    {
+                      "name": "skill_status",
+                      "expression": "`skill_status`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "postings",
+                  "displayName": "Postings requiring it",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "y": {
+                  "fieldName": "skill",
+                  "displayName": "Skill",
+                  "scale": {
+                    "type": "categorical",
+                    "sort": {
+                      "by": "x-reversed"
+                    }
+                  }
+                },
+                "color": {
+                  "fieldName": "skill_status",
+                  "displayName": "My status",
+                  "scale": {
+                    "type": "categorical",
+                    "mappings": [
+                      {
+                        "value": "Have it",
+                        "color": "#2a78d6"
+                      },
+                      {
+                        "value": "Learning",
+                        "color": "#eb6834"
+                      },
+                      {
+                        "value": "Gap",
+                        "color": "#1baf7a"
+                      }
+                    ]
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Most common gaps (required skills I don't list)"
+              }
+            }
+          },
+          "position": {
+            "x": 2,
+            "y": 2,
+            "width": 4,
+            "height": 5
+          }
+        },
+        {
+          "widget": {
+            "name": "bar_20",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_market",
+                  "fields": [
+                    {
+                      "name": "domain",
+                      "expression": "`domain`"
+                    },
+                    {
+                      "name": "avg_fit",
+                      "expression": "AVG(`fit_score`)"
+                    }
+                  ],
+                  "disaggregated": false,
+                  "filters": [
+                    {
+                      "expression": "`is_open`"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "avg_fit",
+                  "displayName": "Average fit score",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "y": {
+                  "fieldName": "domain",
+                  "displayName": "Domain",
+                  "scale": {
+                    "type": "categorical",
+                    "sort": {
+                      "by": "x-reversed"
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Average fit by domain"
+              },
+              "mark": {
+                "colors": [
+                  "#2a78d6"
+                ]
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 7,
+            "width": 3,
+            "height": 5
+          }
+        },
+        {
+          "widget": {
+            "name": "bar_21",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_market",
+                  "fields": [
+                    {
+                      "name": "seniority",
+                      "expression": "`seniority`"
+                    },
+                    {
+                      "name": "avg_fit",
+                      "expression": "AVG(`fit_score`)"
+                    }
+                  ],
+                  "disaggregated": false,
+                  "filters": [
+                    {
+                      "expression": "`is_open`"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "avg_fit",
+                  "displayName": "Average fit score",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "y": {
+                  "fieldName": "seniority",
+                  "displayName": "Seniority",
+                  "scale": {
+                    "type": "categorical",
+                    "sort": {
+                      "by": "x-reversed"
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Average fit by seniority"
+              },
+              "mark": {
+                "colors": [
+                  "#2a78d6"
+                ]
+              }
+            }
+          },
+          "position": {
+            "x": 3,
+            "y": 7,
+            "width": 3,
+            "height": 5
+          }
+        }
+      ],
+      "pageType": "PAGE_TYPE_CANVAS"
+    },
+    {
+      "name": "health",
+      "displayName": "Pipeline health",
+      "layout": [
+        {
+          "widget": {
+            "name": "text_22",
+            "multilineTextboxSpec": {
+              "lines": [
+                "# Pipeline health"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 6,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "text_23",
+            "multilineTextboxSpec": {
+              "lines": [
+                "Quality gate results from the last run (blocking checks fail the job and alert by email), and rows landed in bronze per day."
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 1,
+            "width": 6,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "table_24",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_quality",
+                  "fields": [
+                    {
+                      "name": "check_name",
+                      "expression": "`check_name`"
+                    },
+                    {
+                      "name": "passed",
+                      "expression": "`passed`"
+                    },
+                    {
+                      "name": "blocking",
+                      "expression": "`blocking`"
+                    },
+                    {
+                      "name": "value",
+                      "expression": "`value`"
+                    },
+                    {
+                      "name": "threshold",
+                      "expression": "`threshold`"
+                    },
+                    {
+                      "name": "detail",
+                      "expression": "`detail`"
+                    },
+                    {
+                      "name": "checked_at",
+                      "expression": "`checked_at`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "check_name",
+                    "displayName": "Check"
+                  },
+                  {
+                    "fieldName": "passed",
+                    "displayName": "Passed"
+                  },
+                  {
+                    "fieldName": "blocking",
+                    "displayName": "Blocking"
+                  },
+                  {
+                    "fieldName": "value",
+                    "displayName": "Value"
+                  },
+                  {
+                    "fieldName": "threshold",
+                    "displayName": "Limit"
+                  },
+                  {
+                    "fieldName": "detail",
+                    "displayName": "Detail"
+                  },
+                  {
+                    "fieldName": "checked_at",
+                    "displayName": "Checked at"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Quality checks, latest run"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 2,
+            "width": 6,
+            "height": 5
+          }
+        },
+        {
+          "widget": {
+            "name": "line_25",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_loads",
+                  "fields": [
+                    {
+                      "name": "snapshot_day",
+                      "expression": "`snapshot_day`"
+                    },
+                    {
+                      "name": "postings",
+                      "expression": "SUM(`postings`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "line",
+              "encodings": {
+                "x": {
+                  "fieldName": "snapshot_day",
+                  "displayName": "Day",
+                  "scale": {
+                    "type": "temporal"
+                  }
+                },
+                "y": {
+                  "fieldName": "postings",
+                  "displayName": "Postings",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                }
+              },
+              "mark": {
+                "colors": [
+                  "#2a78d6"
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Postings landed per day"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 7,
+            "width": 6,
+            "height": 4
+          }
+        }
+      ],
+      "pageType": "PAGE_TYPE_CANVAS"
+    }
+  ]
+}
