@@ -4,7 +4,7 @@
       "name": "ds_market",
       "displayName": "Job market (one row per posting)",
       "queryLines": [
-        "SELECT *, CASE WHEN recommendation = 'APPLY' THEN 1.0 ELSE 0.0 END AS is_strong_fit\n        FROM workspace.jobpilot.v_job_market"
+        "SELECT *,\n               -- NULL (not 0) for postings the LLM hasn't scored yet, so AVG ignores them:\n               -- same definition as strong_fit_rate in mv_job_market (enriched postings only).\n               CASE WHEN NOT is_enriched THEN NULL WHEN recommendation = 'APPLY' THEN 1.0 ELSE 0.0 END AS is_strong_fit\n        FROM workspace.jobpilot.v_job_market"
       ]
     },
     {
@@ -32,7 +32,7 @@
       "name": "ds_skill_flags",
       "displayName": "Postings asking for Databricks or GenAI",
       "queryLines": [
-        "SELECT m.job_key, m.city, m.domain,\n               MAX(CASE WHEN d.skill = 'databricks' THEN 1 ELSE 0 END) AS wants_databricks,\n               MAX(CASE WHEN d.skill IN ('genie', 'llm', 'generative ai') THEN 1 ELSE 0 END) AS wants_genai\n        FROM workspace.jobpilot.v_job_market m LEFT JOIN workspace.jobpilot.gold_skill_demand d USING (job_key)\n        WHERE m.is_open GROUP BY m.job_key, m.city, m.domain"
+        "SELECT m.job_key, m.city, m.domain,\n               MAX(CASE WHEN d.skill = 'databricks' THEN 1 ELSE 0 END) AS wants_databricks,\n               MAX(CASE WHEN d.skill IN ('genie', 'llm', 'generative ai') THEN 1 ELSE 0 END) AS wants_genai\n        FROM workspace.jobpilot.v_job_market m LEFT JOIN workspace.jobpilot.gold_skill_demand d USING (job_key)\n        WHERE m.is_open AND m.is_enriched   -- skills come from the LLM: unread postings would count as \"no\"\n        GROUP BY m.job_key, m.city, m.domain"
       ]
     },
     {

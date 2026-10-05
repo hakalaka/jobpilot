@@ -16,7 +16,10 @@ STATUS_COLORS = [{"value": "Have it", "color": BLUE}, {"value": "Learning", "col
 
 DATASETS = [
     ("ds_market", "Job market (one row per posting)", f"""
-        SELECT *, CASE WHEN recommendation = 'APPLY' THEN 1.0 ELSE 0.0 END AS is_strong_fit
+        SELECT *,
+               -- NULL (not 0) for postings the LLM hasn't scored yet, so AVG ignores them:
+               -- same definition as strong_fit_rate in mv_job_market (enriched postings only).
+               CASE WHEN NOT is_enriched THEN NULL WHEN recommendation = 'APPLY' THEN 1.0 ELSE 0.0 END AS is_strong_fit
         FROM {T}.v_job_market"""),
     ("ds_daily", "Open postings per day", f"""
         SELECT d.snapshot_day, d.company, d.open_postings, d.new_postings
@@ -42,7 +45,8 @@ DATASETS = [
                MAX(CASE WHEN d.skill = 'databricks' THEN 1 ELSE 0 END) AS wants_databricks,
                MAX(CASE WHEN d.skill IN ('genie', 'llm', 'generative ai') THEN 1 ELSE 0 END) AS wants_genai
         FROM {T}.v_job_market m LEFT JOIN {T}.gold_skill_demand d USING (job_key)
-        WHERE m.is_open GROUP BY m.job_key, m.city, m.domain"""),
+        WHERE m.is_open AND m.is_enriched   -- skills come from the LLM: unread postings would count as "no"
+        GROUP BY m.job_key, m.city, m.domain"""),
     ("ds_quality", "Latest quality checks", f"""
         SELECT check_name, value, threshold, passed, blocking, detail, checked_at
         FROM {T}.ops_quality_log

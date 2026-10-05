@@ -180,6 +180,15 @@ async function main() {
       <div class="kpi"><div class="v">${fmtPct(num(f.genai_share))}</div><div class="l">ask for GenAI or Genie</div></div>
       <div class="kpi"><div class="v">${fmtPct(num(k.strong_fit_share))}</div><div class="l">strong fit for my profile</div></div>
     </div>`);
+  // Honest caveats: shown only when they matter. If one employer is a big share of the data, or the LLM
+  // hasn't read every posting yet, say so next to the numbers instead of letting them speak for "the market".
+  const caveats = [];
+  const share = num(k.largest_company_share), cover = num(k.enrichment_coverage);
+  if (share !== null && share >= 0.3 && k.largest_company)
+    caveats.push(`${fmtPct(share)} of open postings are from ${esc(k.largest_company)}, so these figures lean towards one employer while more career boards are added.`);
+  if (cover !== null && cover < 0.95)
+    caveats.push(`Skill and fit figures cover the ${fmtPct(cover)} of postings already read by the LLM; the rest are counted but not yet analysed.`);
+  if (caveats.length) app.insertAdjacentHTML("beforeend", `<p class="sub">${caveats.join(" ")}</p>`);
   const grid = document.createElement("div"); grid.className = "grid"; app.append(grid);
 
   const daily = (d.daily || []).map((r) => ({ day: r.day, open_postings: num(r.open_postings), new_postings: num(r.new_postings) }));

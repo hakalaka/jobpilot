@@ -18,7 +18,7 @@ flowchart LR
       B --> S[silver_postings<br/>+ quarantine]
       S -->|ai_query, once per posting| R[silver_job_requirements]
       R -->|deterministic scoring| G[gold_job_fit<br/>gold_skill_demand<br/>gold_postings_daily]
-      G --> M[metric views<br/>mv_job_market, mv_skill_demand]
+      G --> M[metric views<br/>mv_job_market, mv_skill_demand,<br/>mv_market_daily]
       M --> D[AI/BI dashboard]
       M --> GA[Genie Agent]
       G --> Q[quality gate + SQL alerts]
