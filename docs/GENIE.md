@@ -15,9 +15,9 @@ GitHub Action. From then on it deploys with the bundle like everything else.
 | Title | Ask the job market |
 | Description | India data-engineering job postings, refreshed daily: requirements, skills in demand, and how well each posting fits my profile. |
 | Warehouse | Serverless Starter Warehouse |
-| Data | `workspace.jobpilot.mv_job_market`, `workspace.jobpilot.mv_skill_demand`, `workspace.jobpilot.v_job_market` |
+| Data | `workspace.jobpilot.mv_job_market`, `workspace.jobpilot.mv_skill_demand`, `workspace.jobpilot.mv_market_daily`, `workspace.jobpilot.v_job_market` |
 
-Start with these three objects only. Genie is more accurate with fewer, well-described tables, and every column
+Start with these four objects only. Genie is more accurate with fewer, well-described tables, and every column
 already has a Unity Catalog comment.
 
 ## 2. Instructions (keep them short)
@@ -29,6 +29,9 @@ already has a Unity Catalog comment.
 - "Gap" means a required skill not in my profile (skill_status = 'Gap' in mv_skill_demand).
 - When listing postings, include company, title, city and fit_score, sorted by fit_score descending.
 - Cities: Bengaluru, Hyderabad, Pune, Mumbai, Delhi NCR, Chennai, Remote, Other.
+- Trends over time ("per day", "this month", "growing") come from mv_market_daily; never sum open postings across days.
+- Fit and skill figures cover enriched postings only (is_enriched). Mention it when enrichment_coverage is below 1.
+- If largest_company_share is above 0.3, say the figure is dominated by that company.
 ```
 
 ## 3. Example SQL (Knowledge store → Example SQL queries)
@@ -78,6 +81,8 @@ Run them after every change to instructions or data. Target: all pass before a d
 | 6 | How many open postings ask for Databricks? | `mv_skill_demand WHERE skill = 'databricks' AND is_open` |
 | 7 | Show strong-fit healthcare roles | `v_job_market WHERE recommendation = 'APPLY' AND domain LIKE '%health%' AND is_open` |
 | 8 | Which domains pay attention to GenAI skills? | `mv_skill_demand WHERE skill IN ('llm','generative ai','genie')` grouped by domain |
+| 9 | How many postings were open on average per day last week? | `mv_market_daily WHERE week = <last week>` with `MEASURE(avg_open_postings)` |
+| 10 | How much of the market is one company? | `SELECT MEASURE(largest_company_share) FROM mv_job_market WHERE is_open` |
 
 ## 5. Export to code
 

@@ -24,39 +24,46 @@ QUERIES = {
         SELECT COUNT_IF(blocking AND NOT passed) AS failed_blocking, MAX(checked_at) AS last_check
         FROM (SELECT *, ROW_NUMBER() OVER (PARTITION BY check_name ORDER BY checked_at DESC) AS rn
               FROM {T}.ops_quality_log) WHERE rn = 1""",
+    # Headline numbers come from the metric views (notebooks/30_semantic_layer.py), so the public page,
+    # the dashboard and Genie can't disagree. MEASURE(x) = "compute measure x for this grouping".
     "kpis": f"""
-        SELECT COUNT(DISTINCT job_key) AS open_postings,
-               COUNT(DISTINCT company) AS companies,
-               MEDIAN(years_required) AS median_years,
-               AVG(CASE WHEN recommendation = 'APPLY' THEN 1.0 ELSE 0.0 END) AS strong_fit_share,
-               MAX(last_seen) AS as_of
-        FROM {T}.v_job_market WHERE is_open""",
+        SELECT k.*, x.as_of, x.largest_company
+        FROM (SELECT MEASURE(open_postings) AS open_postings,
+                     MEASURE(companies) AS companies,
+                     MEASURE(median_years_required) AS median_years,
+                     MEASURE(strong_fit_rate) AS strong_fit_share,
+                     MEASURE(enrichment_coverage) AS enrichment_coverage,
+                     MEASURE(largest_company_share) AS largest_company_share
+              FROM {T}.mv_job_market WHERE is_open) k
+        -- Two plain facts (not metrics) for the page's caption: data date and the dominant employer.
+        CROSS JOIN (SELECT MAX(last_seen) AS as_of,
+                           MAX(CASE WHEN from_largest_company THEN company END) AS largest_company
+                    FROM {T}.v_job_market) x""",
     "skill_flags": f"""
         SELECT AVG(wants_databricks) AS databricks_share, AVG(wants_genai) AS genai_share FROM (
           SELECT m.job_key,
                  MAX(CASE WHEN d.skill = 'databricks' THEN 1.0 ELSE 0.0 END) AS wants_databricks,
                  MAX(CASE WHEN d.skill IN ('genie', 'llm', 'generative ai') THEN 1.0 ELSE 0.0 END) AS wants_genai
           FROM {T}.v_job_market m LEFT JOIN {T}.gold_skill_demand d USING (job_key)
-          WHERE m.is_open GROUP BY m.job_key)""",
+          -- Enriched only: skills come from the LLM, so an unread posting would count as "doesn't ask".
+          WHERE m.is_open AND m.is_enriched GROUP BY m.job_key)""",
     "daily": f"""
-        SELECT snapshot_day AS day, SUM(open_postings) AS open_postings, SUM(new_postings) AS new_postings
-        FROM {T}.gold_postings_daily
-        WHERE snapshot_day >= date_sub(current_date(), 120)
-        GROUP BY snapshot_day ORDER BY snapshot_day""",
+        SELECT day, MEASURE(avg_open_postings) AS open_postings, MEASURE(new_postings) AS new_postings
+        FROM {T}.mv_market_daily
+        WHERE day >= date_sub(current_date(), 120)
+        GROUP BY day ORDER BY day""",
     "skills": f"""
-        SELECT d.skill,
-               CASE WHEN MAX(CAST(d.in_profile AS INT)) = 1 THEN 'Have it'
-                    WHEN MAX(CAST(d.on_learning_list AS INT)) = 1 THEN 'Learning' ELSE 'Gap' END AS status,
-               COUNT(DISTINCT d.job_key) AS postings
-        FROM {T}.gold_skill_demand d JOIN {T}.v_job_market m USING (job_key)
-        WHERE m.is_open AND d.requirement = 'must'
-        GROUP BY d.skill ORDER BY postings DESC LIMIT 20""",
+        SELECT skill, skill_status AS status, MEASURE(must_have_postings) AS postings
+        FROM {T}.mv_skill_demand
+        WHERE is_open
+        GROUP BY skill, skill_status ORDER BY postings DESC LIMIT 20""",
     "cities": f"""
-        SELECT city, COUNT(DISTINCT job_key) AS postings FROM {T}.v_job_market
+        SELECT city, MEASURE(open_postings) AS postings FROM {T}.mv_job_market
         WHERE is_open GROUP BY city ORDER BY postings DESC""",
     "domains": f"""
-        SELECT COALESCE(NULLIF(domain, ''), 'unspecified') AS domain, COUNT(DISTINCT job_key) AS postings
-        FROM {T}.v_job_market WHERE is_open GROUP BY 1 ORDER BY postings DESC LIMIT 10""",
+        SELECT COALESCE(NULLIF(domain, ''), 'unspecified') AS domain, MEASURE(open_postings) AS postings
+        FROM {T}.mv_job_market WHERE is_open AND is_enriched GROUP BY 1 ORDER BY postings DESC LIMIT 10""",
+    # Row-level lists (not metrics) still read the commented view directly.
     "roles": f"""
         SELECT company, title, city, ROUND(fit_score) AS fit_score, recommendation, url
         FROM {T}.v_job_market WHERE is_open AND recommendation <> 'SKIP'
