@@ -42,7 +42,13 @@ jobs:
           # wait for the run so a failed pipeline also fails this workflow (visible in GitHub)
           if ! databricks jobs run-now "$id" --timeout 90m -o json > run.json 2> err.txt; then
             echo "::error title=Databricks job failed::$(tr '\n' ' ' < err.txt | cut -c1-900)"
-            jq -r '.tasks[]? | "::warning::\(.task_key): \(.state.result_state)"' run.json 2>/dev/null || true
+            # surface each failed task's error in the GitHub UI
+            rid=$(databricks jobs list-runs --job-id "$id" --limit 1 -o json | jq -r '.[0].run_id')
+            databricks jobs get-run "$rid" -o json | jq -r '.tasks[] | select(.state.result_state=="FAILED") | "\(.run_id) \(.task_key)"' |
+            while read trid tkey; do
+              msg=$(databricks jobs get-run-output "$trid" -o json | jq -r '(.error // "") + " " + ((.error_trace // "") | .[-1500:])' | tr '\n' ' ')
+              echo "::error title=Task $tkey failed::$msg"
+            done
             exit 1
           fi
           jq -r '"Result: \(.state.result_state) · \(.run_page_url)"' run.json >> "$GITHUB_STEP_SUMMARY"
