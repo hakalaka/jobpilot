@@ -1,0 +1,218 @@
+[
+ {
+  "company": "PwC",
+  "host": "pwc.wd3.myworkdayjobs.com",
+  "tenant": "pwc",
+  "site": "Global_Experienced_Careers",
+  "reachable": true,
+  "india_facet": null,
+  "databricks_india_total": null
+ },
+ {
+  "company": "State Street",
+  "host": "statestreet.wd1.myworkdayjobs.com",
+  "tenant": "statestreet",
+  "site": "Global",
+  "reachable": true,
+  "india_facet": [
+   "Location_Country",
+   "c4f78be1a8f14da0ab49ce1162348a5e"
+  ],
+  "databricks_india_total": 13
+ },
+ {
+  "company": "Cigna",
+  "host": "cigna.wd5.myworkdayjobs.com",
+  "tenant": "cigna",
+  "site": "cignacareers",
+  "reachable": true,
+  "india_facet": [
+   "Location_Country",
+   "c4f78be1a8f14da0ab49ce1162348a5e"
+  ],
+  "databricks_india_total": 18
+ },
+ {
+  "company": "Walmart",
+  "host": "walmart.wd5.myworkdayjobs.com",
+  "tenant": "walmart",
+  "site": "WalmartExternal",
+  "reachable": false,
+  "india_facet": null,
+  "databricks_india_total": null
+ },
+ {
+  "company": "NVIDIA",
+  "host": "nvidia.wd5.myworkdayjobs.com",
+  "tenant": "nvidia",
+  "site": "NVIDIAExternalCareerSite",
+  "reachable": true,
+  "india_facet": [
+   "locationMainGroup",
+   "2fcb99c455831013ea52b82135ba3266"
+  ],
+  "databricks_india_total": null
+ },
+ {
+  "company": "Mastercard",
+  "host": "mastercard.wd1.myworkdayjobs.com",
+  "tenant": "mastercard",
+  "site": "CorporateCareers",
+  "reachable": true,
+  "india_facet": null,
+  "databricks_india_total": null
+ },
+ {
+  "company": "Salesforce",
+  "host": "salesforce.wd12.myworkdayjobs.com",
+  "tenant": "salesforce",
+  "site": "External_Career_Site",
+  "reachable": true,
+  "india_facet": [
+   "CF_-_REC_-_LRV_-_Job_Posting_Anchor_-_Country_from_Job_Posting_Location_Extended",
+   "c4f78be1a8f14da0ab49ce1162348a5e"
+  ],
+  "databricks_india_total": 3
+ },
+ {
+  "company": "Citi",
+  "host": "citi.wd5.myworkdayjobs.com",
+  "tenant": "citi",
+  "site": "2",
+  "reachable": true,
+  "india_facet": [
+   "Country_and_Jurisdiction",
+   "c4f78be1a8f14da0ab49ce1162348a5e"
+  ],
+  "databricks_india_total": 17
+ },
+ {
+  "company": "Wells Fargo",
+  "host": "wd1.myworkdaysite.com",
+  "tenant": "wf",
+  "site": "WellsFargoJobs",
+  "reachable": true,
+  "india_facet": [
+   "locationMainGroup",
+   "c4f78be1a8f14da0ab49ce1162348a5e"
+  ],
+  "databricks_india_total": null
+ },
+ {
+  "company": "Fidelity",
+  "host": "fmr.wd1.myworkdayjobs.com",
+  "tenant": "fmr",
+  "site": "FidelityCareers",
+  "reachable": true,
+  "india_facet": [
+   "locationMainGroup",
+   "c4f78be1a8f14da0ab49ce1162348a5e"
+  ],
+  "databricks_india_total": null
+ },
+ {
+  "company": "Novartis",
+  "host": "novartis.wd3.myworkdayjobs.com",
+  "tenant": "novartis",
+  "site": "Novartis_Careers",
+  "reachable": true,
+  "india_facet": [
+   "locationMainGroup",
+   "c4f78be1a8f14da0ab49ce1162348a5e"
+  ],
+  "databricks_india_total": null
+ },
+ {
+  "company": "GSK",
+  "host": "gsk.wd5.myworkdayjobs.com",
+  "tenant": "gsk",
+  "site": "GSKCareers",
+  "reachable": true,
+  "india_facet": [
+   "Location_Country",
+   "c4f78be1a8f14da0ab49ce1162348a5e"
+  ],
+  "databricks_india_total": 0
+ },
+ {
+  "company": "AstraZeneca",
+  "host": "astrazeneca.wd3.myworkdayjobs.com",
+  "tenant": "astrazeneca",
+  "site": "Careers",
+  "reachable": true,
+  "india_facet": null,
+  "databricks_india_total": null
+ },
+ {
+  "company": "Elevance Health",
+  "host": "elevancehealth.wd1.myworkdayjobs.com",
+  "tenant": "elevancehealth",
+  "site": "ANT",
+  "reachable": true,
+  "india_facet": null,
+  "databricks_india_total": null
+ },
+ {
+  "company": "HSBC",
+  "host": "hsbc.wd3.myworkdayjobs.com",
+  "tenant": "hsbc",
+  "site": "external",
+  "reachable": false,
+  "india_facet": null,
+  "databricks_india_total": null
+ },
+ {
+  "company": "Deutsche Bank",
+  "host": "db.wd3.myworkdayjobs.com",
+  "tenant": "db",
+  "site": "DBWebSite",
+  "reachable": true,
+  "india_facet": [
+   "Country",
+   "c4f78be1a8f14da0ab49ce1162348a5e"
+  ],
+  "databricks_india_total": 1
+ },
+ {
+  "company": "Morgan Stanley",
+  "host": "ms.wd5.myworkdayjobs.com",
+  "tenant": "ms",
+  "site": "External",
+  "reachable": true,
+  "india_facet": [
+   "Location_Country",
+   "c4f78be1a8f14da0ab49ce1162348a5e"
+  ],
+  "databricks_india_total": 2
+ },
+ {
+  "company": "Barclays",
+  "host": "barclays.wd3.myworkdayjobs.com",
+  "tenant": "barclays",
+  "site": "External_Career_Site_Barclays",
+  "reachable": true,
+  "india_facet": null,
+  "databricks_india_total": null
+ },
+ {
+  "company": "Philips",
+  "host": "philips.wd3.myworkdayjobs.com",
+  "tenant": "philips",
+  "site": "jobs-and-careers",
+  "reachable": true,
+  "india_facet": [
+   "locationMainGroup",
+   "6e1b2a934716103c2adde1d57e7700ea"
+  ],
+  "databricks_india_total": null
+ },
+ {
+  "company": "Thermo Fisher",
+  "host": "thermofisher.wd5.myworkdayjobs.com",
+  "tenant": "thermofisher",
+  "site": "ThermoFisherCareers",
+  "reachable": true,
+  "india_facet": null,
+  "databricks_india_total": null
+ }
+]
