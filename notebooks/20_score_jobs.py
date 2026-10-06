@@ -21,7 +21,7 @@ import pandas as pd
 sys.path.insert(0, os.path.abspath("../src"))
 from jobpilot import scoring  # noqa: E402
 from jobpilot.runtime import load_profile  # noqa: E402
-from jobpilot.skills import normalize_all  # noqa: E402
+from jobpilot.skills import canonical_skills, is_known_skill  # noqa: E402
 
 dbutils.widgets.text("catalog", "workspace")
 dbutils.widgets.text("schema", "jobpilot")
@@ -46,8 +46,10 @@ for rec in jobs.to_dict("records"):
         rec[k] = list(rec[k]) if rec[k] is not None else []
     fit_rows.append({"job_key": rec["job_key"], **scoring.score_job(rec, profile)})
     for req, col in (("must", "must_have_skills"), ("nice", "nice_to_have_skills")):
-        for sk in normalize_all(rec[col]):
-            skill_rows.append((rec["job_key"], sk, req, scoring.covered(sk, have), sk in learning))
+        # Same phrase-to-skill logic as the fit score, so skill demand and gaps count the same way.
+        for sk in canonical_skills(rec[col], have | learning):
+            skill_rows.append((rec["job_key"], sk, req, scoring.covered(sk, have), sk in learning,
+                               is_known_skill(sk, have | learning)))
 
 # COMMAND ----------
 
@@ -57,7 +59,7 @@ fit_schema = ("job_key STRING, fit_score DOUBLE, recommendation STRING, must_cov
 fit_df = (spark.createDataFrame(pd.DataFrame(fit_rows) if fit_rows else [], fit_schema)
           .selectExpr("*", "current_timestamp() AS scored_at"))
 skill_df = spark.createDataFrame(skill_rows, "job_key STRING, skill STRING, requirement STRING, "
-                                             "in_profile BOOLEAN, on_learning_list BOOLEAN")
+                                             "in_profile BOOLEAN, on_learning_list BOOLEAN, known_skill BOOLEAN")
 # INSERT OVERWRITE keeps table history, comments and permissions (unlike dropping and recreating)
 fit_df.write.mode("overwrite").insertInto(f"{T}.gold_job_fit")
 skill_df.write.mode("overwrite").insertInto(f"{T}.gold_skill_demand")

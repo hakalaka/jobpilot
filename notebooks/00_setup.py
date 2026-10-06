@@ -54,7 +54,8 @@ ddl = {
     "gold_skill_demand": """
         job_key STRING NOT NULL, skill STRING COMMENT 'Canonical skill name',
         requirement STRING COMMENT 'must or nice', in_profile BOOLEAN COMMENT 'True if the skill is in my profile',
-        on_learning_list BOOLEAN""",
+        on_learning_list BOOLEAN,
+        known_skill BOOLEAN COMMENT 'False if the matcher did not recognise this term (candidate for skills.py)'""",
     "applications": """
         job_key STRING NOT NULL, company STRING, title STRING, url STRING,
         status STRING COMMENT 'SHORTLISTED, READY, APPLIED, INTERVIEW, OFFER, REJECTED, SKIPPED',
@@ -71,6 +72,7 @@ spark.sql(f"ALTER TABLE {T}.applications SET TBLPROPERTIES (delta.enableChangeDa
 new_columns = {
     "silver_job_requirements": {"text_hash": "STRING", "prompt_version": "STRING"},
     "silver_extract_errors": {"text_hash": "STRING", "prompt_version": "STRING", "llm_model": "STRING"},
+    "gold_skill_demand": {"known_skill": "BOOLEAN"},
 }
 for table, cols in new_columns.items():
     existing = {c.lower() for c in spark.table(f"{T}.{table}").columns}
