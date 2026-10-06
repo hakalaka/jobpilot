@@ -735,7 +735,7 @@
             "name": "text_02",
             "multilineTextboxSpec": {
               "lines": [
-                "Live from company career boards, refreshed daily by a Lakeflow pipeline. Requirements extracted with `ai_query`; fit scored against my profile. Every number comes from a Unity Catalog metric view, the same one Genie uses."
+                "Live from company career boards, refreshed daily by a Lakeflow pipeline. Requirements extracted with `ai_query`; fit scored against my profile. Collected daily from company career sites on seven platforms (Workday, Oracle Recruiting, SAP SuccessFactors, Amazon Jobs, Eightfold, Greenhouse, Lever). Every number comes from a Unity Catalog metric view, the same one Genie uses."
               ]
             }
           },
@@ -2267,7 +2267,141 @@
         },
         {
           "widget": {
-            "name": "text_40",
+            "name": "bar_40",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "mv_market",
+                  "fields": [
+                    {
+                      "name": "platform",
+                      "expression": "`source_platform`"
+                    },
+                    {
+                      "name": "postings",
+                      "expression": "MEASURE(`open_postings`)"
+                    }
+                  ],
+                  "disaggregated": false,
+                  "filters": [
+                    {
+                      "expression": "`is_open`"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "postings",
+                  "displayName": "Open postings",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "y": {
+                  "fieldName": "platform",
+                  "displayName": "Platform",
+                  "scale": {
+                    "type": "categorical",
+                    "sort": {
+                      "by": "x-reversed"
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Open postings by source platform (one connector per platform)"
+              },
+              "mark": {
+                "colors": [
+                  "#2a78d6"
+                ]
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 18,
+            "width": 3,
+            "height": 5
+          }
+        },
+        {
+          "widget": {
+            "name": "bar_41",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "mv_market",
+                  "fields": [
+                    {
+                      "name": "platform",
+                      "expression": "`source_platform`"
+                    },
+                    {
+                      "name": "companies",
+                      "expression": "MEASURE(`companies`)"
+                    }
+                  ],
+                  "disaggregated": false,
+                  "filters": [
+                    {
+                      "expression": "`is_open`"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "companies",
+                  "displayName": "Companies",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "y": {
+                  "fieldName": "platform",
+                  "displayName": "Platform",
+                  "scale": {
+                    "type": "categorical",
+                    "sort": {
+                      "by": "x-reversed"
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Hiring companies by source platform"
+              },
+              "mark": {
+                "colors": [
+                  "#2a78d6"
+                ]
+              }
+            }
+          },
+          "position": {
+            "x": 3,
+            "y": 18,
+            "width": 3,
+            "height": 5
+          }
+        },
+        {
+          "widget": {
+            "name": "text_42",
             "multilineTextboxSpec": {
               "lines": [
                 "Skills the matcher doesn't recognise. Each counts as a gap in the fit score today. If a term is real (a tool or a synonym), add it to `src/jobpilot/skills.py` and push."
@@ -2283,7 +2417,7 @@
         },
         {
           "widget": {
-            "name": "table_41",
+            "name": "table_43",
             "queries": [
               {
                 "name": "main_query",

@@ -189,6 +189,13 @@ async function main() {
   if (cover !== null && cover < 0.95)
     caveats.push(`Skill and fit figures cover the ${fmtPct(cover)} of postings already read by the LLM; the rest are counted but not yet analysed.`);
   if (caveats.length) app.insertAdjacentHTML("beforeend", `<p class="sub">${caveats.join(" ")}</p>`);
+  // Where the data comes from: proof the pipeline reads many career sites, not one.
+  const src = (d.sources || []).map((r) => ({ platform: r.platform, postings: num(r.postings), companies: num(r.companies) }));
+  if (src.length) {
+    const firms = src.reduce((t, r) => t + (r.companies || 0), 0);
+    app.insertAdjacentHTML("beforeend", `<p class="sub">Read daily from ${fmtInt(firms)} companies' career sites across
+      ${src.length} platforms: ${src.map((r) => `${esc(r.platform)} (${fmtInt(r.postings)})`).join(", ")}.</p>`);
+  }
   const grid = document.createElement("div"); grid.className = "grid"; app.append(grid);
 
   const daily = (d.daily || []).map((r) => ({ day: r.day, open_postings: num(r.open_postings), new_postings: num(r.new_postings) }));

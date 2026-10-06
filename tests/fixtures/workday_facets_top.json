@@ -1,0 +1,120 @@
+{
+ "total": 1052,
+ "jobPostings": [],
+ "facets": [
+  {
+   "facetParameter": "Location_Country",
+   "descriptor": "Location Country",
+   "values": [
+    {
+     "descriptor": "United States of America",
+     "id": "bc33aa3152ec42d4995f4791a106ed09",
+     "count": 442
+    },
+    {
+     "descriptor": "India",
+     "id": "c4f78be1a8f14da0ab49ce1162348a5e",
+     "count": 283
+    },
+    {
+     "descriptor": "Poland",
+     "id": "131d5ac7e3ee4d7b962bdc96e498e412",
+     "count": 88
+    }
+   ]
+  },
+  {
+   "facetParameter": "Location_Region_State_Province",
+   "descriptor": "Location Region/State/Province",
+   "values": [
+    {
+     "descriptor": "Lesser Poland",
+     "id": "1796189bbfb44244a4a7242ec41d28cd",
+     "count": 73
+    }
+   ]
+  },
+  {
+   "facetParameter": "jobFamilyGroup",
+   "descriptor": "Job Category",
+   "values": []
+  },
+  {
+   "facetParameter": "timeType",
+   "descriptor": "Time Type",
+   "values": []
+  },
+  {
+   "facetParameter": "locationMainGroup",
+   "descriptor": null,
+   "values": [
+    {
+     "facetParameter": "locations",
+     "descriptor": "Locations",
+     "values": [
+      {
+       "descriptor": "Bangalore, India",
+       "id": "8c182d98fcf801cd1491982e1244be61",
+       "count": 124
+      },
+      {
+       "descriptor": "Bangalore, India",
+       "id": "5f6636a460dc017615d96c5d00156c6b",
+       "count": 11
+      },
+      {
+       "descriptor": "Bangalore, India",
+       "id": "8c182d98fcf80189c5e3f59f11441159",
+       "count": 8
+      },
+      {
+       "descriptor": "Chennai, India",
+       "id": "73308bb7dae301a24ba29a79be98655a",
+       "count": 10
+      },
+      {
+       "descriptor": "Coimbatore, India",
+       "id": "8c182d98fcf80149d68aa32e1244cd61",
+       "count": 11
+      },
+      {
+       "descriptor": "Gdansk, Poland",
+       "id": "8c182d98fcf80166e8896f2f1244db62",
+       "count": 32
+      },
+      {
+       "descriptor": "Gdansk, Poland",
+       "id": "8c182d98fcf80185e3ca3fa111449c5a",
+       "count": 13
+      },
+      {
+       "descriptor": "Hyderabad, India",
+       "id": "8c182d98fcf8016ead15ab2e1244d761",
+       "count": 86
+      },
+      {
+       "descriptor": "Hyderabad, India",
+       "id": "8c182d98fcf801330602df9e1144b857",
+       "count": 13
+      },
+      {
+       "descriptor": "Krakow, Poland",
+       "id": "8c182d98fcf8012477646b2f1244d662",
+       "count": 71
+      },
+      {
+       "descriptor": "Krakow, Poland",
+       "id": "8c182d98fcf8018f80921d9f11440358",
+       "count": 5
+      },
+      {
+       "descriptor": "Mumbai, India",
+       "id": "8c182d98fcf8010676c09f2e1244c861",
+       "count": 28
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

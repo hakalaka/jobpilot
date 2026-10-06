@@ -1,0 +1,57 @@
+{
+ "count": 2,
+ "positions": [
+  {
+   "id": 790317336766,
+   "name": "Associate, APAC Revenue Analytics",
+   "posting_name": "Associate, APAC Revenue Analytics",
+   "location": "Mumbai,India",
+   "locations": [
+    "Mumbai,India"
+   ],
+   "hot": 0,
+   "department": "Strategy & Analysis",
+   "business_unit": "Streaming",
+   "t_update": 1784851200,
+   "t_create": 1784851200,
+   "ats_job_id": "JR41789",
+   "display_job_id": "JR41789",
+   "type": "ATS",
+   "id_locale": "JR41789-en-US",
+   "job_description": "",
+   "locale": "en-US",
+   "stars": 0,
+   "medallionProgram": null,
+   "location_flexibility": null,
+   "work_location_option": "onsite",
+   "canonicalPositionUrl": "https://explore.jobs.netflix.net/careers/job/790317336766",
+   "isPrivate": false
+  },
+  {
+   "id": 790317788391,
+   "name": "Senior Manager, Marketing Planning & Studio Relations - India",
+   "posting_name": "Senior Manager, Marketing Planning & Studio Relations - India",
+   "location": "Mumbai,India",
+   "locations": [
+    "Mumbai,India"
+   ],
+   "hot": 0,
+   "department": "Marketing",
+   "business_unit": "Streaming",
+   "t_update": 1786579200,
+   "t_create": 1786579200,
+   "ats_job_id": "JR42099",
+   "display_job_id": "JR42099",
+   "type": "ATS",
+   "id_locale": "JR42099-en-US",
+   "job_description": "",
+   "locale": "en-US",
+   "stars": 0,
+   "medallionProgram": null,
+   "location_flexibility": null,
+   "work_location_option": "onsite",
+   "canonicalPositionUrl": "https://explore.jobs.netflix.net/careers/job/790317788391",
+   "isPrivate": false
+  }
+ ]
+}
