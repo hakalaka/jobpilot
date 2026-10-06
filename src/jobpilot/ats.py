@@ -111,11 +111,16 @@ def _http_text(url: str, timeout: int = 30) -> str:
         return r.read().decode("utf-8", errors="replace")
 
 
+MIN_KEPT_CHARS = 400   # shorter than this after cutting = the marker was at the top, not the bottom
+
+
 def strip_boilerplate(text: str, markers) -> str:
     """Cut the text at the first employer-boilerplate marker ("About EY", "Equal Opportunity Employer"...).
     Fewer tokens for the LLM, and no boilerplate words in the skill counts."""
     cut = min((i for i in (text.find(m) for m in markers) if i > 0), default=len(text))
-    return text[:cut].strip()
+    # Some employers put the company blurb FIRST (Salesforce starts with "About Salesforce"): cutting there
+    # would leave a stub and send the posting to quarantine. Only cut when a real description remains.
+    return text[:cut].strip() if cut >= MIN_KEPT_CHARS else text.strip()
 
 
 def fetch(source: str, token: str, timeout: int = 30):
