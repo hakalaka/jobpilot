@@ -115,3 +115,21 @@ def test_dispatch_knows_every_source_in_config():
     cfg = yaml.safe_load((Path(__file__).parents[1] / "config" / "sources.yaml").read_text())
     known = {"greenhouse", "lever", "workday", "amazon", "eightfold", "oracle", "successfactors"}
     assert {b["source"] for b in cfg["boards"]} <= known
+
+
+def test_trust_search_keeps_generic_titles():
+    # JPMC titles its Databricks roles "Software Engineer III": with trust_search the server's search decides.
+    assert ats.title_keywords_for({"trust_search": True}, ["data engineer"]) == []
+    assert ats.title_keywords_for({}, ["data engineer"]) == ["data engineer"]
+    lst, det = _json("oracle_list.json"), _json("oracle_detail.json")
+    board = {"source": "oracle", "company": "JPMorgan Chase", "host": "h", "site": "CX_1001", "search_texts": ["databricks"]}
+    strict = Fake([("Details", det), ("recruitingCEJobRequisitions", lst)])
+    assert oracle.fetch(board, ["data engineer"], [], pause=0, get=strict) == []          # generic titles dropped
+    trusted = Fake([("Details", det), ("recruitingCEJobRequisitions", lst)])
+    assert len(oracle.fetch({**board, "trust_search": True}, ["data engineer"], [], pause=0, get=trusted)) == 3
+
+
+def test_workday_location_does_not_repeat_the_country():
+    detail = {"jobPostingInfo": {"title": "Data Engineer", "location": "Hyderabad, India", "country": {"descriptor": "India"},
+                                 "jobReqId": "R1", "jobDescription": "<p>x</p>", "externalUrl": "u", "startDate": "2026-10-01"}}
+    assert ats.parse_workday_detail(detail, {"company": "Cigna"})["location"] == "Hyderabad, India"

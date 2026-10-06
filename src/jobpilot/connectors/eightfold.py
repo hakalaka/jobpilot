@@ -25,6 +25,7 @@ def parse_detail(d: dict, board: dict) -> dict:
 
 
 def fetch(board, title_keywords, locations, pause=0.5, get=None) -> list:
+    title_keywords = ats.title_keywords_for(board, title_keywords)
     get = get or ats._http_json
     base, domain = f"https://{board['host']}/api/apply/v2/jobs", board["domain"]
     wanted, seen = [], set()

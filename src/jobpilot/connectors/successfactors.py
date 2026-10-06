@@ -56,6 +56,7 @@ def parse_detail(html: str, path: str, board: dict) -> dict:
 
 
 def fetch(board, title_keywords, locations, pause=1.0, get_text=None) -> list:
+    title_keywords = ats.title_keywords_for(board, title_keywords)
     get_text = get_text or ats._http_text
     base = f"https://{board['host']}{board.get('path', '')}/search/"
     wanted, seen = [], set()
