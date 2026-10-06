@@ -3,7 +3,7 @@
 No LLM here on purpose: the score must be repeatable and easy to explain.
 The LLM only extracts requirements (silver); this module decides (gold).
 """
-from .skills import normalize_all
+from .skills import canonical_skills
 
 WEIGHTS = {"must": 0.55, "nice": 0.15, "years": 0.15, "location": 0.10, "domain": 0.05}
 APPLY_AT, STRETCH_AT = 70, 50
@@ -43,8 +43,11 @@ def _years_score(years_min, have_years: float) -> float:
 def score_job(job: dict, profile) -> dict:
     """job: extracted fields (must_have_skills, nice_to_have_skills, years_min, location, work_mode, domain)."""
     have = profile.skills
-    must = normalize_all(job.get("must_have_skills"))
-    nice = normalize_all(job.get("nice_to_have_skills"))
+    # Job requirements are messy phrases; find the known skills inside them. My own skill names are
+    # added to the vocabulary so profile-specific terms (e.g. "medicaid") are recognised too.
+    known = have | profile.learning
+    must = canonical_skills(job.get("must_have_skills"), known)
+    nice = canonical_skills(job.get("nice_to_have_skills"), known)
 
     matched = [s for s in must + nice if _covered(s, have)]
     missing = [s for s in must if not _covered(s, have)]

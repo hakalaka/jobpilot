@@ -59,6 +59,14 @@ DATASETS = [
         SELECT check_name, value, threshold, passed, blocking, detail, checked_at
         FROM {T}.ops_quality_log
         QUALIFY ROW_NUMBER() OVER (PARTITION BY check_name ORDER BY checked_at DESC) = 1"""),
+    ("ds_unknown_skills", "Skills the matcher doesn't recognise", f"""
+        -- Terms the LLM extracted that aren't in the skill vocabulary (src/jobpilot/skills.py).
+        -- Each one currently counts as a gap. Real terms that keep appearing should be added there.
+        SELECT d.skill, COUNT(DISTINCT d.job_key) AS postings,
+               COUNT(DISTINCT d.job_key) FILTER (WHERE d.requirement = 'must') AS required_by
+        FROM {T}.gold_skill_demand d JOIN {T}.v_job_market m USING (job_key)
+        WHERE NOT d.known_skill AND m.is_open
+        GROUP BY d.skill ORDER BY postings DESC LIMIT 30"""),
     ("ds_loads", "Bronze rows loaded per day", f"""
         SELECT snapshot_day, source, COUNT(*) AS rows_loaded, COUNT(DISTINCT job_key) AS postings
         FROM {T}.bronze_job_snapshots GROUP BY snapshot_day, source"""),
@@ -216,6 +224,10 @@ health_page = [
            ("threshold", "Limit"), ("detail", "Detail"), ("checked_at", "Checked at")], 0, 2, 6, 5),
     line("Postings landed per day", "ds_loads", "snapshot_day", "`snapshot_day`", "postings", "SUM(`postings`)",
          0, 7, 6, 4, "Postings"),
+    text(["Skills the matcher doesn't recognise. Each counts as a gap in the fit score today. "
+          "If a term is real (a tool or a synonym), add it to `src/jobpilot/skills.py` and push."], 0, 11, 6, 1),
+    table("Unrecognised skill terms in open postings", "ds_unknown_skills",
+          [("skill", "Term as extracted"), ("postings", "Postings"), ("required_by", "Required by")], 0, 12, 6, 6),
 ]
 
 dashboard = {
