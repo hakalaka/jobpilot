@@ -89,6 +89,7 @@ def test_oracle_discovers_india_and_fetches_details():
     recs = oracle.fetch(board, [], [], pause=0, get=fake)
     list_calls = [c for c in fake.calls if "recruitingCEJobRequisitions?" in c]
     assert "selectedLocationsFacet=300000000289360" in list_calls[1]     # India, found by name
+    assert all("expand=requisitionList" in c for c in list_calls)         # without it: a count but no jobs
     assert len([c for c in fake.calls if "Details" in c]) == 3          # one per requisition
     r = recs[0]
     assert r["source"] == "oracle" and r["url"].endswith("/sites/CX_1001/job/" + r["source_id"])
@@ -133,3 +134,11 @@ def test_workday_location_does_not_repeat_the_country():
     detail = {"jobPostingInfo": {"title": "Data Engineer", "location": "Hyderabad, India", "country": {"descriptor": "India"},
                                  "jobReqId": "R1", "jobDescription": "<p>x</p>", "externalUrl": "u", "startDate": "2026-10-01"}}
     assert ats.parse_workday_detail(detail, {"company": "Cigna"})["location"] == "Hyderabad, India"
+
+
+def test_boilerplate_at_the_top_is_not_cut():
+    # Salesforce postings open with "About Salesforce": cutting there left 194 characters (seen live).
+    top = "About Salesforce. We are the CRM company. " + "You will build data pipelines with Databricks. " * 20
+    assert len(ats.strip_boilerplate(top, ["About Salesforce"])) == len(top.strip())
+    bottom = "You will build data pipelines with Databricks. " * 20 + "About Salesforce. We are the CRM company."
+    assert ats.strip_boilerplate(bottom, ["About Salesforce"]).endswith("Databricks.")

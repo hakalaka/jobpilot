@@ -27,7 +27,8 @@ def _list_url(board, keyword, offset, location_id=None, limit=PAGE) -> str:
               f"keyword={urllib.parse.quote(chr(34) + keyword + chr(34))},sortBy=POSTING_DATES_DESC")
     if location_id:
         finder += f",selectedLocationsFacet={location_id}"
-    return f"{_api(board)}/recruitingCEJobRequisitions?onlyData=true&finder={finder}"
+    # expand=requisitionList is required: without it Oracle returns the total count but no jobs (found live).
+    return f"{_api(board)}/recruitingCEJobRequisitions?onlyData=true&expand=requisitionList.secondaryLocations&finder={finder}"
 
 
 def find_location_id(board, keyword, get) -> str:
