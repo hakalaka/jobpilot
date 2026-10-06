@@ -62,7 +62,8 @@ QUERIES = {
         WHERE is_open GROUP BY city ORDER BY postings DESC""",
     "domains": f"""
         SELECT COALESCE(NULLIF(domain, ''), 'unspecified') AS domain, MEASURE(open_postings) AS postings
-        FROM {T}.mv_job_market WHERE is_open AND is_enriched GROUP BY 1 ORDER BY postings DESC LIMIT 10""",
+        FROM {T}.mv_job_market WHERE is_open AND is_enriched AND domain <> 'Not stated'
+        GROUP BY 1 ORDER BY postings DESC LIMIT 10""",
     # Row-level lists (not metrics) still read the commented view directly.
     "roles": f"""
         SELECT company, title, city, ROUND(fit_score) AS fit_score, recommendation, url

@@ -56,6 +56,13 @@ ddl = {
         requirement STRING COMMENT 'must or nice', in_profile BOOLEAN COMMENT 'True if the skill is in my profile',
         on_learning_list BOOLEAN,
         known_skill BOOLEAN COMMENT 'False if the matcher did not recognise this term (candidate for skills.py)'""",
+    "gold_resume_actions": """
+        skill STRING COMMENT 'Canonical skill name',
+        must_postings INT COMMENT 'Open postings that require it',
+        all_postings INT COMMENT 'Open postings that ask for it (required or nice to have)',
+        status STRING COMMENT 'Have it, Learning or Gap',
+        action STRING COMMENT 'What to do on the resume, from src/jobpilot/advice.py',
+        priority INT COMMENT '1 = most useful action first'""",
     "applications": """
         job_key STRING NOT NULL, company STRING, title STRING, url STRING,
         status STRING COMMENT 'SHORTLISTED, READY, APPLIED, INTERVIEW, OFFER, REJECTED, SKIPPED',

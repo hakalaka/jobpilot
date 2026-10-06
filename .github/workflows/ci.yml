@@ -45,3 +45,11 @@ jobs:
         if: github.ref == 'refs/heads/main'
         # --force only when someone chose it on a manual run; normal pushes keep the safety check.
         run: databricks bundle deploy -t prod ${{ inputs.overwrite_remote_changes && '--force' || '' }}
+      - name: Bring tables and views up to date with the new code
+        if: github.ref == 'refs/heads/main'
+        # Runs setup -> score_jobs -> semantic_layer (no fetching, no LLM). On a brand-new workspace the
+        # pipeline tables don't exist yet, so a failure here is a warning, not a failed deploy.
+        run: |
+          if ! databricks bundle run -t prod jobpilot_post_deploy 2> err.txt; then
+            echo "::warning title=Post-deploy refresh failed::$(tr '\n' ' ' < err.txt | cut -c1-600) (run jobpilot-daily, then re-run ci)"
+          fi
