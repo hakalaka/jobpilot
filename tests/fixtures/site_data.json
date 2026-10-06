@@ -458,5 +458,37 @@
    "url": "https://example.com/job"
   }
  ],
- "generated_at": "2026-10-05T03:31+00:00"
+ "generated_at": "2026-10-05T03:31+00:00",
+ "sources": [
+  {
+   "platform": "Workday",
+   "postings": "231",
+   "companies": "14"
+  },
+  {
+   "platform": "Amazon Jobs",
+   "postings": "36",
+   "companies": "1"
+  },
+  {
+   "platform": "SAP SuccessFactors",
+   "postings": "43",
+   "companies": "1"
+  },
+  {
+   "platform": "Greenhouse",
+   "postings": "21",
+   "companies": "9"
+  },
+  {
+   "platform": "Oracle Recruiting",
+   "postings": "17",
+   "companies": "1"
+  },
+  {
+   "platform": "Lever",
+   "postings": "5",
+   "companies": "3"
+  }
+ ]
 }

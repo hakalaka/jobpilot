@@ -21,7 +21,8 @@ locations:
 - gurgaon
 - chennai
 - noida
-# Workday boards are configured by hand (see docs/CONNECTORS.md).
+# Workday and other-platform boards are configured by hand (see docs/CONNECTORS.md);
+# Greenhouse and Lever boards are verified and written by tools/discover_boards.py.
 boards:
 - source: workday
   company: Accenture
@@ -33,6 +34,28 @@ boards:
     locationCountry: [c4f78be1a8f14da0ab49ce1162348a5e]   # India
   max_pages: 15     # list pages (20 each); relevance-sorted, so the first pages matter most
   max_jobs: 150     # detail calls (one per job)
+# ---- More Workday employers. No facet IDs needed: the connector finds each tenant's India filter
+# ---- itself (discover_country_facets). Verified from a GitHub runner on 6 Oct 2026.
+# ---- trust_search: the "databricks" search is specific and small, so keep every result even when the title
+# ---- is generic ("Software Engineer III"). Accenture keeps the title filter: its search returns ~900 results.
+- {source: workday, company: State Street, host: statestreet.wd1.myworkdayjobs.com, tenant: statestreet, site: Global, search_texts: [databricks], trust_search: true, max_pages: 5, max_jobs: 60}
+- {source: workday, company: Cigna, host: cigna.wd5.myworkdayjobs.com, tenant: cigna, site: cignacareers, search_texts: [databricks], trust_search: true, max_pages: 5, max_jobs: 60}
+- {source: workday, company: Citi, host: citi.wd5.myworkdayjobs.com, tenant: citi, site: "2", search_texts: [databricks], trust_search: true, max_pages: 5, max_jobs: 60}
+- {source: workday, company: Wells Fargo, host: wd1.myworkdaysite.com, tenant: wf, site: WellsFargoJobs, search_texts: [databricks], trust_search: true, max_pages: 5, max_jobs: 60}
+- {source: workday, company: Fidelity, host: fmr.wd1.myworkdayjobs.com, tenant: fmr, site: FidelityCareers, search_texts: [databricks], trust_search: true, max_pages: 5, max_jobs: 60}
+- {source: workday, company: Novartis, host: novartis.wd3.myworkdayjobs.com, tenant: novartis, site: Novartis_Careers, search_texts: [databricks], trust_search: true, max_pages: 5, max_jobs: 60}
+- {source: workday, company: NVIDIA, host: nvidia.wd5.myworkdayjobs.com, tenant: nvidia, site: NVIDIAExternalCareerSite, search_texts: [databricks], trust_search: true, max_pages: 5, max_jobs: 60}
+- {source: workday, company: Thermo Fisher Scientific, host: thermofisher.wd5.myworkdayjobs.com, tenant: thermofisher, site: ThermoFisherCareers, search_texts: [databricks], trust_search: true, max_pages: 5, max_jobs: 60}
+- {source: workday, company: Mastercard, host: mastercard.wd1.myworkdayjobs.com, tenant: mastercard, site: CorporateCareers, search_texts: [databricks], trust_search: true, max_pages: 5, max_jobs: 60}
+- {source: workday, company: AstraZeneca, host: astrazeneca.wd3.myworkdayjobs.com, tenant: astrazeneca, site: Careers, search_texts: [databricks], trust_search: true, max_pages: 5, max_jobs: 60}
+- {source: workday, company: Salesforce, host: salesforce.wd12.myworkdayjobs.com, tenant: salesforce, site: External_Career_Site, search_texts: [databricks], trust_search: true, max_pages: 5, max_jobs: 60}
+- {source: workday, company: Morgan Stanley, host: ms.wd5.myworkdayjobs.com, tenant: ms, site: External, search_texts: [databricks], trust_search: true, max_pages: 5, max_jobs: 60}
+- {source: workday, company: Deutsche Bank, host: db.wd3.myworkdayjobs.com, tenant: db, site: DBWebSite, search_texts: [databricks], trust_search: true, max_pages: 5, max_jobs: 60}
+# ---- Other platforms (src/jobpilot/connectors/) --------------------------------------------------
+- {source: amazon, company: Amazon, search_texts: [data engineer], country_code: IND, max_pages: 3}
+- {source: oracle, company: JPMorgan Chase, host: jpmc.fa.oraclecloud.com, site: CX_1001, search_texts: [databricks], trust_search: true, max_pages: 4, max_jobs: 60}
+- {source: successfactors, company: EY, host: careers.ey.com, path: /ey, search_texts: [databricks], trust_search: true, max_pages: 3, max_jobs: 60}
+- {source: eightfold, company: Netflix, host: explore.jobs.netflix.net, domain: netflix.com, search_texts: [data], max_pages: 3, max_jobs: 20}
 - source: greenhouse
   token: databricks
   company: Databricks

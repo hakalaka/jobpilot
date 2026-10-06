@@ -1,0 +1,148 @@
+{
+ "total": 2914,
+ "jobPostings": [],
+ "facets": [
+  {
+   "facetParameter": "timeType",
+   "descriptor": "Full/Part-time",
+   "values": []
+  },
+  {
+   "facetParameter": "workerSubType",
+   "descriptor": "Job Type",
+   "values": []
+  },
+  {
+   "facetParameter": "jobFamilyGroup",
+   "descriptor": "Job Category",
+   "values": []
+  },
+  {
+   "facetParameter": "locationMainGroup",
+   "descriptor": null,
+   "values": [
+    {
+     "facetParameter": "locations",
+     "descriptor": "Locations",
+     "values": [
+      {
+       "descriptor": "Ahmedabad, India",
+       "id": "8991183e0f2310019d4ccbbf3e760000",
+       "count": 3
+      },
+      {
+       "descriptor": "Bangalore, India",
+       "id": "fc837035319310019d46f21f7b7d0000",
+       "count": 152
+      },
+      {
+       "descriptor": "Baroda, India",
+       "id": "c140a6578f1a10019d28b049c3fa0000",
+       "count": 1
+      },
+      {
+       "descriptor": "Bengaluru, India",
+       "id": "6609626fa31510019d449c18da6c0000",
+       "count": 22
+      },
+      {
+       "descriptor": "Chennai, India",
+       "id": "6609626fa31510019d4619a6501b0000",
+       "count": 1
+      },
+      {
+       "descriptor": "Czestochowa, Poland",
+       "id": "a6abbf7cd1c110019d508966c8c50000",
+       "count": 2
+      },
+      {
+       "descriptor": "Greenfield, Indiana, USA",
+       "id": "c63cac162b8d10019d62fab098e50000",
+       "count": 5
+      },
+      {
+       "descriptor": "Hyderabad, India",
+       "id": "ed4d76dbefe910019d4264f637340000",
+       "count": 34
+      },
+      {
+       "descriptor": "Indianapolis, Indiana, USA",
+       "id": "34f9267ed65810019d4135ec832c0000",
+       "count": 9
+      },
+      {
+       "descriptor": "Katowice, Poland",
+       "id": "8e512918bbd110019d4fe174324d0000",
+       "count": 1
+      },
+      {
+       "descriptor": "Lodzi, Poland",
+       "id": "b2bb23b3e37610019d5059ea5af80000",
+       "count": 2
+      },
+      {
+       "descriptor": "Lucknow, India",
+       "id": "34f9267ed65810019d596ba9ed860000",
+       "count": 1
+      },
+      {
+       "descriptor": "Mumbai, India",
+       "id": "c140a6578f1a10019d2979767ec30000",
+       "count": 20
+      },
+      {
+       "descriptor": "New Delhi, India",
+       "id": "fc837035319310019d4233ea907f0000",
+       "count": 1
+      },
+      {
+       "descriptor": "Noida, India",
+       "id": "b2591be32ceb10019d422c5d3d5e0000",
+       "count": 1
+      },
+      {
+       "descriptor": "Poznan, Poland",
+       "id": "c63cac162b8d10019d4b60d453f20000",
+       "count": 1
+      },
+      {
+       "descriptor": "Pune, India",
+       "id": "c140a6578f1a10019d22b4f570d50000",
+       "count": 2
+      },
+      {
+       "descriptor": "Remote, India",
+       "id": "a6abbf7cd1c110019d618341992a0000",
+       "count": 17
+      },
+      {
+       "descriptor": "Remote, Indiana, USA",
+       "id": "ed4d76dbefe910019d52b81d4b010000",
+       "count": 7
+      },
+      {
+       "descriptor": "Remote, Poland",
+       "id": "34f9267ed65810019d61154a3d5f0000",
+       "count": 38
+      },
+      {
+       "descriptor": "Remote, United States",
+       "id": "04d1553c410d1001f8de7b503c510000",
+       "count": 6
+      },
+      {
+       "descriptor": "Warsaw, Poland",
+       "id": "b2591be32ceb10019d3f188dc09c0000",
+       "count": 4
+      },
+      {
+       "descriptor": "Wroclaw, Poland",
+       "id": "8991183e0f2310019d5010d340fe0000",
+       "count": 1
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

@@ -44,7 +44,7 @@ CREATE OR REPLACE VIEW {T}.v_job_market (
   first_seen COMMENT 'First day the posting appeared',
   last_seen COMMENT 'Last day the posting appeared',
   days_open COMMENT 'Number of days the posting has been seen',
-  source COMMENT 'workday, greenhouse, lever or manual',
+  source COMMENT 'Connector that read the posting: workday, greenhouse, lever, amazon, eightfold, oracle, successfactors or manual (pasted JD)',
   url COMMENT 'Link to the posting',
   is_enriched COMMENT 'True once the LLM has read the posting and it has a fit score. Market counts include every posting; fit and skill figures only enriched ones',
   from_largest_company COMMENT 'True if the posting is from the company with the most open postings. Use it to check whether one employer dominates a figure',
@@ -197,6 +197,13 @@ dimensions:
   - name: title
     expr: title
     synonyms: [role, position, opening]
+  - name: source_platform
+    expr: CASE source WHEN 'workday' THEN 'Workday' WHEN 'greenhouse' THEN 'Greenhouse' WHEN 'lever' THEN 'Lever'
+                    WHEN 'amazon' THEN 'Amazon Jobs' WHEN 'eightfold' THEN 'Eightfold' WHEN 'oracle' THEN 'Oracle Recruiting'
+                    WHEN 'successfactors' THEN 'SAP SuccessFactors' WHEN 'manual' THEN 'Pasted JD' ELSE source END
+    display_name: Source platform
+    synonyms: [career site, ats, applicant tracking system, source]
+    comment: The careers platform the posting was read from (one connector per platform).
 measures:
   - name: postings
     expr: COUNT(DISTINCT job_key)
@@ -248,6 +255,10 @@ measures:
   - name: companies
     expr: COUNT(DISTINCT company)
     display_name: Hiring companies
+  - name: source_platforms
+    expr: COUNT(DISTINCT source) FILTER (WHERE source <> 'manual')
+    display_name: Career platforms read
+    comment: Number of different careers platforms (Workday, Oracle, SuccessFactors...) postings came from.
   - name: largest_company_share
     expr: COUNT(DISTINCT job_key) FILTER (WHERE from_largest_company) / NULLIF(COUNT(DISTINCT job_key), 0)
     display_name: Share from the largest company

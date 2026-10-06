@@ -187,6 +187,8 @@ overview = [
     text(["# India data-engineering job market"], 0, 0, 6, 1),
     text(["Live from company career boards, refreshed daily by a Lakeflow pipeline. "
           "Requirements extracted with `ai_query`; fit scored against my profile. "
+          "Collected daily from company career sites on seven platforms (Workday, Oracle Recruiting, SAP SuccessFactors, "
+          "Amazon Jobs, Eightfold, Greenhouse, Lever). "
           "Every number comes from a Unity Catalog metric view, the same one Genie uses."], 0, 1, 6, 1),
     multi_filter("City", "city", ALL_MARKET, 0, 2),
     multi_filter("Domain", "domain", ALL_MARKET, 2, 2),
@@ -271,6 +273,10 @@ health_page = [
            ("threshold", "Limit"), ("detail", "Detail"), ("checked_at", "Checked at")], 0, 2, 6, 5),
     line("Postings landed per day", "ds_loads", "snapshot_day", "`snapshot_day`", "postings", "SUM(`postings`)",
          0, 7, 6, 4, "Postings"),
+    bar("Open postings by source platform (one connector per platform)", "mv_market", "platform", "`source_platform`",
+        "postings", measure("open_postings"), 0, 18, 3, 5, filters=OPEN, cat_label="Platform", val_label="Open postings"),
+    bar("Hiring companies by source platform", "mv_market", "platform", "`source_platform`",
+        "companies", measure("companies"), 3, 18, 3, 5, filters=OPEN, cat_label="Platform", val_label="Companies"),
     text(["Skills the matcher doesn't recognise. Each counts as a gap in the fit score today. "
           "If a term is real (a tool or a synonym), add it to `src/jobpilot/skills.py` and push."], 0, 11, 6, 1),
     table("Unrecognised skill terms in open postings", "ds_unknown_skills",
