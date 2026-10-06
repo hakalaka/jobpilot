@@ -31,9 +31,9 @@ CREATE OR REPLACE VIEW {T}.v_job_market (
   city COMMENT 'Normalised Indian city of the role: Bengaluru, Hyderabad, Pune, Mumbai, Delhi NCR, Chennai, Remote or Other',
   location COMMENT 'Location text as posted',
   work_mode COMMENT 'onsite, hybrid, remote or unknown; null until the posting is enriched',
-  seniority COMMENT 'junior, mid, senior, lead or manager, as extracted from the description; null until enriched',
+  seniority COMMENT 'Junior, Mid, Senior, Lead, Manager or Not stated. From the LLM, or from the job title when the LLM gave nothing usable',
   years_required COMMENT 'Minimum years of experience the posting asks for; null if not stated or not yet enriched',
-  domain COMMENT 'Industry of the role, e.g. healthcare, fintech, consulting; null until enriched',
+  domain COMMENT 'Industry group: Healthcare & life sciences, Banking & financial services, Insurance, Consulting & IT services, Technology & software, Retail & consumer, Energy & manufacturing, Telecom & media, Public sector, Cybersecurity, Multiple industries, Other or Not stated',
   cloud COMMENT 'Cloud platforms named in the posting',
   must_have_skills COMMENT 'Required skills as written in the posting',
   fit_score COMMENT 'How well the posting matches my profile, 0 to 100. 70 or more is a strong fit. Null until enriched',
@@ -47,7 +47,9 @@ CREATE OR REPLACE VIEW {T}.v_job_market (
   source COMMENT 'workday, greenhouse, lever or manual',
   url COMMENT 'Link to the posting',
   is_enriched COMMENT 'True once the LLM has read the posting and it has a fit score. Market counts include every posting; fit and skill figures only enriched ones',
-  from_largest_company COMMENT 'True if the posting is from the company with the most open postings. Use it to check whether one employer dominates a figure'
+  from_largest_company COMMENT 'True if the posting is from the company with the most open postings. Use it to check whether one employer dominates a figure',
+  domain_detail COMMENT 'Industry text exactly as the LLM extracted it (domain is the cleaned group)',
+  matched_skills COMMENT 'Skills the posting asks for that I have: the ones to highlight when applying'
 )
 COMMENT 'India data-engineering job market: one row per valid posting, with requirements and my fit score once enriched'
 AS
@@ -68,8 +70,40 @@ WITH postings AS (
       WHEN lower(p.location) LIKE '%remote%' THEN 'Remote'
       ELSE 'Other'
     END AS city,
-    p.location, r.work_mode, r.seniority, r.years_min, lower(r.domain) AS domain, r.cloud, r.must_have_skills,
-    g.fit_score, g.recommendation, g.missing_skills, g.learning_gaps,
+    p.location, r.work_mode,
+    -- (Regexes avoid backslashes on purpose: this SQL sits in a Python string and Spark unescapes it again,
+    --  so a backslash-b would arrive as a backspace character. "(^|[^a-z])sr([^a-z]|$)" means "the word sr".)
+    -- SENIORITY: the LLM writes free text ("Senior", "Sr. level", null). Map it onto five levels;
+    -- if the LLM gave nothing usable, try the job title ("Senior Data Engineer"). Else 'Not stated'.
+    COALESCE(
+      CASE WHEN lower(r.seniority) RLIKE 'manager|head|director'          THEN 'Manager'
+           WHEN lower(r.seniority) RLIKE 'lead|principal|staff|architect' THEN 'Lead'
+           WHEN lower(r.seniority) RLIKE 'senior|(^|[^a-z])sr([^a-z]|$)'                   THEN 'Senior'
+           WHEN lower(r.seniority) RLIKE 'mid|intermediate'               THEN 'Mid'
+           WHEN lower(r.seniority) RLIKE 'junior|entry|graduate|fresher'  THEN 'Junior' END,
+      CASE WHEN lower(p.title) RLIKE 'manager|head of|director'           THEN 'Manager'
+           WHEN lower(p.title) RLIKE 'lead|principal|staff|architect'     THEN 'Lead'
+           WHEN lower(p.title) RLIKE 'senior|(^|[^a-z])sr([^a-z]|$)'                   THEN 'Senior'
+           WHEN lower(p.title) RLIKE 'junior|graduate|intern|trainee'     THEN 'Junior' END,
+      'Not stated') AS seniority,
+    r.years_min,
+    -- DOMAIN: the LLM sometimes names the industry ("healthcare"), sometimes a tech area ("data and ai"),
+    -- sometimes several ("banking, financial and energy sectors"), sometimes nothing. Same pattern as the
+    -- data-quality rules: collect every group the text matches into an array, then decide once.
+    filter(array(
+      CASE WHEN lower(r.domain) RLIKE 'health|pharma|life science|medic|clinic|hospital|biotech' THEN 'Healthcare & life sciences' END,
+      CASE WHEN lower(r.domain) RLIKE 'bank|financ|fintech|payment|capital market|trading|wealth' THEN 'Banking & financial services' END,
+      CASE WHEN lower(r.domain) RLIKE 'insur'                                                   THEN 'Insurance' END,
+      CASE WHEN lower(r.domain) RLIKE 'consult|professional services|it services|outsourc'      THEN 'Consulting & IT services' END,
+      CASE WHEN lower(r.domain) RLIKE 'retail|e-?commerce|consumer|cpg|fmcg'                    THEN 'Retail & consumer' END,
+      CASE WHEN lower(r.domain) RLIKE 'energy|utilit|oil|gas|manufactur|automotive|industrial'  THEN 'Energy & manufacturing' END,
+      CASE WHEN lower(r.domain) RLIKE 'telecom|media|entertain|gaming'                          THEN 'Telecom & media' END,
+      CASE WHEN lower(r.domain) RLIKE 'government|public sector'                                THEN 'Public sector' END,
+      CASE WHEN lower(r.domain) RLIKE 'secur|identity|(^|[^a-z])iam([^a-z]|$)|cyber'                              THEN 'Cybersecurity' END
+    ), x -> x IS NOT NULL) AS domain_groups,
+    r.domain AS domain_detail,
+    r.cloud, r.must_have_skills,
+    g.fit_score, g.recommendation, g.missing_skills, g.learning_gaps, g.matched_skills,
     p.is_open, p.first_seen, p.last_seen, p.days_seen, p.source, p.url,
     (r.job_key IS NOT NULL AND g.job_key IS NOT NULL) AS is_enriched
   FROM {T}.silver_postings p
@@ -87,10 +121,23 @@ largest_company AS (
   LIMIT 1
 )
 SELECT
-  p.job_key, p.company, p.title, p.city, p.location, p.work_mode, p.seniority, p.years_min, p.domain, p.cloud,
+  p.job_key, p.company, p.title, p.city, p.location, p.work_mode, p.seniority, p.years_min,
+  -- One domain per posting, decided from the matched groups above.
+  CASE WHEN size(p.domain_groups) > 1 THEN 'Multiple industries'
+       WHEN size(p.domain_groups) = 1 THEN p.domain_groups[0]
+       -- No industry named: either a tech area ("data and ai", "streaming") or nothing at all
+       WHEN lower(p.domain_detail) RLIKE 'data|(^|[^a-z])ai([^a-z]|$)|analytic|software|technolog|cloud|saas|engineering|streaming'
+                                       THEN 'Technology & software'
+       WHEN p.domain_detail IS NULL
+         OR trim(lower(p.domain_detail)) IN ('', 'unknown', 'n/a', 'na', 'none', 'not specified', 'null')
+                                       THEN 'Not stated'
+       ELSE 'Other'
+  END,
+  p.cloud,
   p.must_have_skills, p.fit_score, p.recommendation, p.missing_skills, p.learning_gaps,
   p.is_open, p.first_seen, p.last_seen, p.days_seen, p.source, p.url, p.is_enriched,
-  p.company IN (SELECT company FROM largest_company) AS from_largest_company
+  p.company IN (SELECT company FROM largest_company) AS from_largest_company,
+  p.domain_detail, p.matched_skills
 FROM postings p
 """)
 
@@ -170,6 +217,19 @@ measures:
   - name: strong_fit_postings
     expr: COUNT(DISTINCT job_key) FILTER (WHERE recommendation = 'APPLY')
     display_name: Strong-fit postings
+  - name: stretch_postings
+    expr: COUNT(DISTINCT job_key) FILTER (WHERE recommendation = 'STRETCH')
+    display_name: Worth-a-try postings
+    comment: Postings scored STRETCH (fit 50-69, or a strong fit with a years or location caveat).
+  - name: companies_with_strong_fit
+    expr: COUNT(DISTINCT company) FILTER (WHERE recommendation = 'APPLY')
+    display_name: Companies with a strong fit
+  - name: new_this_week
+    expr: COUNT(DISTINCT job_key) FILTER (WHERE first_seen >= date_sub(current_date(), 7))
+    display_name: New in the last 7 days
+  - name: best_fit_score
+    expr: MAX(fit_score)
+    display_name: Best fit score
   - name: strong_fit_rate
     # Denominator = enriched postings only: an unscored posting is "unknown", not "not a fit".
     # NULLIF on every ratio: SQL warehouses run in ANSI mode, where x / 0 is an error, not null.

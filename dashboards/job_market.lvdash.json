@@ -46,6 +46,20 @@
       ]
     },
     {
+      "name": "ds_apply",
+      "displayName": "Open roles worth applying to",
+      "queryLines": [
+        "-- One row per open APPLY / STRETCH posting, with what to highlight and what's missing.\n        -- Market data and my fit only: the private applications tracker is never read here.\n        SELECT company, title, city, ROUND(fit_score) AS fit_score,\n               CASE recommendation WHEN 'APPLY' THEN 'Apply' ELSE 'Worth a try' END AS fit_band,\n               array_join(slice(matched_skills, 1, 6), ', ') AS highlight_skills,\n               array_join(slice(missing_skills, 1, 4), ', ') AS missing_skills,\n               years_required, first_seen, days_open, url\n        FROM workspace.jobpilot.v_job_market\n        WHERE is_open AND recommendation IN ('APPLY', 'STRETCH')\n        ORDER BY recommendation, fit_score DESC, first_seen DESC"
+      ]
+    },
+    {
+      "name": "ds_resume",
+      "displayName": "What to change on my resume",
+      "queryLines": [
+        "-- From the scoring task (src/jobpilot/advice.py): open-market demand turned into resume actions.\n        SELECT skill, action, status, must_postings, all_postings, priority\n        FROM workspace.jobpilot.gold_resume_actions\n        WHERE priority <= 4\n        ORDER BY priority, must_postings DESC, all_postings DESC"
+      ]
+    },
+    {
       "name": "ds_unknown_skills",
       "displayName": "Skills the matcher doesn't recognise",
       "queryLines": [
@@ -61,6 +75,641 @@
     }
   ],
   "pages": [
+    {
+      "name": "apply",
+      "displayName": "Where to apply",
+      "layout": [
+        {
+          "widget": {
+            "name": "text_18",
+            "multilineTextboxSpec": {
+              "lines": [
+                "# Where to apply, and what to change on my resume"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 6,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "text_19",
+            "multilineTextboxSpec": {
+              "lines": [
+                "Open roles scored against my profile every morning. **Apply** = fit 70+ with years and location OK; **Worth a try** = fit 50-69 or a near miss. *Highlight* = skills the posting asks for that I have: lead with these in the tailored resume. The resume table turns what open postings require into changes to make."
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 1,
+            "width": 6,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "filter_20",
+            "queries": [
+              {
+                "name": "filter_city_mv_market",
+                "query": {
+                  "datasetName": "mv_market",
+                  "disaggregated": false,
+                  "fields": [
+                    {
+                      "name": "city",
+                      "expression": "`city`"
+                    }
+                  ]
+                }
+              },
+              {
+                "name": "filter_city_ds_apply",
+                "query": {
+                  "datasetName": "ds_apply",
+                  "disaggregated": false,
+                  "fields": [
+                    {
+                      "name": "city",
+                      "expression": "`city`"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-multi-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "city",
+                    "displayName": "City",
+                    "queryName": "filter_city_mv_market"
+                  },
+                  {
+                    "fieldName": "city",
+                    "displayName": "City",
+                    "queryName": "filter_city_ds_apply"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "City"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 2,
+            "width": 2,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "kpi_21",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "mv_market",
+                  "fields": [
+                    {
+                      "name": "strong_fit_postings",
+                      "expression": "MEASURE(`strong_fit_postings`)"
+                    }
+                  ],
+                  "disaggregated": false,
+                  "filters": [
+                    {
+                      "expression": "`is_open`"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "strong_fit_postings",
+                  "displayName": "Strong-fit roles open"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Strong-fit roles open"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 3,
+            "width": 1,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "kpi_22",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "mv_market",
+                  "fields": [
+                    {
+                      "name": "stretch_postings",
+                      "expression": "MEASURE(`stretch_postings`)"
+                    }
+                  ],
+                  "disaggregated": false,
+                  "filters": [
+                    {
+                      "expression": "`is_open`"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "stretch_postings",
+                  "displayName": "Worth-a-try roles open"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Worth-a-try roles open"
+              }
+            }
+          },
+          "position": {
+            "x": 1,
+            "y": 3,
+            "width": 1,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "kpi_23",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "mv_market",
+                  "fields": [
+                    {
+                      "name": "companies_with_strong_fit",
+                      "expression": "MEASURE(`companies_with_strong_fit`)"
+                    }
+                  ],
+                  "disaggregated": false,
+                  "filters": [
+                    {
+                      "expression": "`is_open`"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "companies_with_strong_fit",
+                  "displayName": "Companies with a strong fit"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Companies with a strong fit"
+              }
+            }
+          },
+          "position": {
+            "x": 2,
+            "y": 3,
+            "width": 1,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "kpi_24",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "mv_market",
+                  "fields": [
+                    {
+                      "name": "new_this_week",
+                      "expression": "MEASURE(`new_this_week`)"
+                    }
+                  ],
+                  "disaggregated": false,
+                  "filters": [
+                    {
+                      "expression": "`is_open`"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "new_this_week",
+                  "displayName": "New in the last 7 days"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "New in the last 7 days"
+              }
+            }
+          },
+          "position": {
+            "x": 3,
+            "y": 3,
+            "width": 1,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "kpi_25",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "mv_market",
+                  "fields": [
+                    {
+                      "name": "best_fit_score",
+                      "expression": "MEASURE(`best_fit_score`)"
+                    }
+                  ],
+                  "disaggregated": false,
+                  "filters": [
+                    {
+                      "expression": "`is_open`"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "best_fit_score",
+                  "displayName": "Best fit score"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Best fit score"
+              }
+            }
+          },
+          "position": {
+            "x": 4,
+            "y": 3,
+            "width": 1,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "kpi_26",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "mv_market",
+                  "fields": [
+                    {
+                      "name": "enrichment_coverage",
+                      "expression": "MEASURE(`enrichment_coverage`)"
+                    }
+                  ],
+                  "disaggregated": false,
+                  "filters": [
+                    {
+                      "expression": "`is_open`"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "enrichment_coverage",
+                  "displayName": "Postings analysed by the LLM",
+                  "format": {
+                    "type": "number-percent",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 0
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Postings analysed by the LLM"
+              }
+            }
+          },
+          "position": {
+            "x": 5,
+            "y": 3,
+            "width": 1,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "bar_27",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "mv_market",
+                  "fields": [
+                    {
+                      "name": "company",
+                      "expression": "`company`"
+                    },
+                    {
+                      "name": "strong",
+                      "expression": "MEASURE(`strong_fit_postings`)"
+                    }
+                  ],
+                  "disaggregated": false,
+                  "filters": [
+                    {
+                      "expression": "`is_open`"
+                    },
+                    {
+                      "expression": "`recommendation` = 'APPLY'"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "strong",
+                  "displayName": "Strong-fit openings",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "y": {
+                  "fieldName": "company",
+                  "displayName": "Company",
+                  "scale": {
+                    "type": "categorical",
+                    "sort": {
+                      "by": "x-reversed"
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Companies with the most strong-fit openings"
+              },
+              "mark": {
+                "colors": [
+                  "#2a78d6"
+                ]
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 5,
+            "width": 3,
+            "height": 7
+          }
+        },
+        {
+          "widget": {
+            "name": "table_28",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_resume",
+                  "fields": [
+                    {
+                      "name": "action",
+                      "expression": "`action`"
+                    },
+                    {
+                      "name": "skill",
+                      "expression": "`skill`"
+                    },
+                    {
+                      "name": "must_postings",
+                      "expression": "`must_postings`"
+                    },
+                    {
+                      "name": "all_postings",
+                      "expression": "`all_postings`"
+                    },
+                    {
+                      "name": "status",
+                      "expression": "`status`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "action",
+                    "displayName": "Action"
+                  },
+                  {
+                    "fieldName": "skill",
+                    "displayName": "Skill"
+                  },
+                  {
+                    "fieldName": "must_postings",
+                    "displayName": "Open postings requiring it"
+                  },
+                  {
+                    "fieldName": "all_postings",
+                    "displayName": "Asking for it"
+                  },
+                  {
+                    "fieldName": "status",
+                    "displayName": "Status"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "What to change on my resume"
+              }
+            }
+          },
+          "position": {
+            "x": 3,
+            "y": 5,
+            "width": 3,
+            "height": 7
+          }
+        },
+        {
+          "widget": {
+            "name": "table_29",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_apply",
+                  "fields": [
+                    {
+                      "name": "company",
+                      "expression": "`company`"
+                    },
+                    {
+                      "name": "title",
+                      "expression": "`title`"
+                    },
+                    {
+                      "name": "city",
+                      "expression": "`city`"
+                    },
+                    {
+                      "name": "fit_score",
+                      "expression": "`fit_score`"
+                    },
+                    {
+                      "name": "fit_band",
+                      "expression": "`fit_band`"
+                    },
+                    {
+                      "name": "highlight_skills",
+                      "expression": "`highlight_skills`"
+                    },
+                    {
+                      "name": "missing_skills",
+                      "expression": "`missing_skills`"
+                    },
+                    {
+                      "name": "years_required",
+                      "expression": "`years_required`"
+                    },
+                    {
+                      "name": "days_open",
+                      "expression": "`days_open`"
+                    },
+                    {
+                      "name": "url",
+                      "expression": "`url`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "company",
+                    "displayName": "Company"
+                  },
+                  {
+                    "fieldName": "title",
+                    "displayName": "Role"
+                  },
+                  {
+                    "fieldName": "city",
+                    "displayName": "City"
+                  },
+                  {
+                    "fieldName": "fit_score",
+                    "displayName": "Fit"
+                  },
+                  {
+                    "fieldName": "fit_band",
+                    "displayName": "Band"
+                  },
+                  {
+                    "fieldName": "highlight_skills",
+                    "displayName": "Highlight on resume"
+                  },
+                  {
+                    "fieldName": "missing_skills",
+                    "displayName": "Missing"
+                  },
+                  {
+                    "fieldName": "years_required",
+                    "displayName": "Years asked"
+                  },
+                  {
+                    "fieldName": "days_open",
+                    "displayName": "Days on board"
+                  },
+                  {
+                    "fieldName": "url",
+                    "displayName": "Link"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Apply list: open roles, best fit first"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 12,
+            "width": 6,
+            "height": 9
+          }
+        }
+      ],
+      "pageType": "PAGE_TYPE_CANVAS"
+    },
     {
       "name": "market",
       "displayName": "Market overview",
@@ -945,6 +1594,9 @@
                     },
                     {
                       "expression": "`is_enriched`"
+                    },
+                    {
+                      "expression": "`domain` <> 'Not stated'"
                     }
                   ]
                 }
@@ -963,7 +1615,7 @@
                 },
                 "y": {
                   "fieldName": "domain",
-                  "displayName": "Domain",
+                  "displayName": "Industry",
                   "scale": {
                     "type": "categorical",
                     "sort": {
@@ -974,7 +1626,7 @@
               },
               "frame": {
                 "showTitle": true,
-                "title": "Open postings by domain"
+                "title": "Open postings by industry"
               },
               "mark": {
                 "colors": [
@@ -1097,7 +1749,7 @@
       "layout": [
         {
           "widget": {
-            "name": "text_18",
+            "name": "text_30",
             "multilineTextboxSpec": {
               "lines": [
                 "# My fit and skill gaps"
@@ -1113,7 +1765,7 @@
         },
         {
           "widget": {
-            "name": "text_19",
+            "name": "text_31",
             "multilineTextboxSpec": {
               "lines": [
                 "Deterministic fit score per posting: must-have coverage 55%, nice-to-have 15%, years 15%, location 10%, domain 5%. Gaps on my learning list are what I'm studying next. Only postings the LLM has analysed have a fit score."
@@ -1129,7 +1781,7 @@
         },
         {
           "widget": {
-            "name": "bar_20",
+            "name": "bar_32",
             "queries": [
               {
                 "name": "main_query",
@@ -1199,7 +1851,7 @@
         },
         {
           "widget": {
-            "name": "bar_21",
+            "name": "bar_33",
             "queries": [
               {
                 "name": "main_query",
@@ -1281,7 +1933,7 @@
         },
         {
           "widget": {
-            "name": "bar_22",
+            "name": "bar_34",
             "queries": [
               {
                 "name": "main_query",
@@ -1304,6 +1956,9 @@
                     },
                     {
                       "expression": "`is_enriched`"
+                    },
+                    {
+                      "expression": "`domain` <> 'Not stated'"
                     }
                   ]
                 }
@@ -1322,7 +1977,7 @@
                 },
                 "y": {
                   "fieldName": "domain",
-                  "displayName": "Domain",
+                  "displayName": "Industry",
                   "scale": {
                     "type": "categorical",
                     "sort": {
@@ -1333,7 +1988,7 @@
               },
               "frame": {
                 "showTitle": true,
-                "title": "Average fit by domain"
+                "title": "Average fit by industry"
               },
               "mark": {
                 "colors": [
@@ -1351,7 +2006,7 @@
         },
         {
           "widget": {
-            "name": "bar_23",
+            "name": "bar_35",
             "queries": [
               {
                 "name": "main_query",
@@ -1374,6 +2029,9 @@
                     },
                     {
                       "expression": "`is_enriched`"
+                    },
+                    {
+                      "expression": "`seniority` <> 'Not stated'"
                     }
                   ]
                 }
@@ -1428,7 +2086,7 @@
       "layout": [
         {
           "widget": {
-            "name": "text_24",
+            "name": "text_36",
             "multilineTextboxSpec": {
               "lines": [
                 "# Pipeline health"
@@ -1444,7 +2102,7 @@
         },
         {
           "widget": {
-            "name": "text_25",
+            "name": "text_37",
             "multilineTextboxSpec": {
               "lines": [
                 "Quality gate results from the last run (blocking checks fail the job and alert by email), and rows landed in bronze per day."
@@ -1460,7 +2118,7 @@
         },
         {
           "widget": {
-            "name": "table_26",
+            "name": "table_38",
             "queries": [
               {
                 "name": "main_query",
@@ -1550,7 +2208,7 @@
         },
         {
           "widget": {
-            "name": "line_27",
+            "name": "line_39",
             "queries": [
               {
                 "name": "main_query",
@@ -1609,7 +2267,7 @@
         },
         {
           "widget": {
-            "name": "text_28",
+            "name": "text_40",
             "multilineTextboxSpec": {
               "lines": [
                 "Skills the matcher doesn't recognise. Each counts as a gap in the fit score today. If a term is real (a tool or a synonym), add it to `src/jobpilot/skills.py` and push."
@@ -1625,7 +2283,7 @@
         },
         {
           "widget": {
-            "name": "table_29",
+            "name": "table_41",
             "queries": [
               {
                 "name": "main_query",

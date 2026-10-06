@@ -19,7 +19,7 @@ import sys
 import pandas as pd
 
 sys.path.insert(0, os.path.abspath("../src"))
-from jobpilot import scoring  # noqa: E402
+from jobpilot import advice, scoring  # noqa: E402
 from jobpilot.runtime import load_profile  # noqa: E402
 from jobpilot.skills import canonical_skills, is_known_skill  # noqa: E402
 
@@ -34,7 +34,7 @@ profile = load_profile(CAT, SCH, os.path.abspath(".."))
 # Hundreds to low thousands of rows: the driver is the simplest correct place. At larger scale, ship src/
 # as a wheel so executors can import it, and use mapInPandas.
 jobs = spark.sql(f"""
-  SELECT p.job_key, p.location, r.work_mode, r.years_min, r.domain, r.must_have_skills, r.nice_to_have_skills
+  SELECT p.job_key, p.is_open, p.location, r.work_mode, r.years_min, r.domain, r.must_have_skills, r.nice_to_have_skills
   FROM {T}.silver_postings p JOIN {T}.silver_job_requirements r USING (job_key)
 """).toPandas()
 print(f"scoring {len(jobs)} postings")
@@ -63,6 +63,25 @@ skill_df = spark.createDataFrame(skill_rows, "job_key STRING, skill STRING, requ
 # INSERT OVERWRITE keeps table history, comments and permissions (unlike dropping and recreating)
 fit_df.write.mode("overwrite").insertInto(f"{T}.gold_job_fit")
 skill_df.write.mode("overwrite").insertInto(f"{T}.gold_skill_demand")
+
+# COMMAND ----------
+
+# Resume advice: what the OPEN market asks for, turned into actions on my resume (src/jobpilot/advice.py).
+# Only recognised skills: an unrecognised term is a vocabulary problem (Pipeline health page), not advice.
+open_jobs = {k for k, o in zip(jobs["job_key"], jobs["is_open"]) if o}
+demand = {}
+for job_key, skill, req, _have, _learning, known in skill_rows:
+    if job_key in open_jobs and known:
+        must_keys, all_keys = demand.setdefault(skill, (set(), set()))
+        all_keys.add(job_key)
+        if req == "must":
+            must_keys.add(job_key)
+actions = advice.resume_actions({s: (len(m), len(a)) for s, (m, a) in demand.items()}, profile)
+actions_df = spark.createDataFrame(
+    [(r["skill"], r["must_postings"], r["all_postings"], r["status"], r["action"], r["priority"]) for r in actions],
+    "skill STRING, must_postings INT, all_postings INT, status STRING, action STRING, priority INT")
+actions_df.write.mode("overwrite").insertInto(f"{T}.gold_resume_actions")
+print(f"resume advice: {sum(r['priority'] <= 4 for r in actions)} actions for {len(open_jobs)} open postings")
 
 # COMMAND ----------
 

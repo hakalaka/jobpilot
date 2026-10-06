@@ -59,6 +59,23 @@ DATASETS = [
         SELECT check_name, value, threshold, passed, blocking, detail, checked_at
         FROM {T}.ops_quality_log
         QUALIFY ROW_NUMBER() OVER (PARTITION BY check_name ORDER BY checked_at DESC) = 1"""),
+    ("ds_apply", "Open roles worth applying to", f"""
+        -- One row per open APPLY / STRETCH posting, with what to highlight and what's missing.
+        -- Market data and my fit only: the private applications tracker is never read here.
+        SELECT company, title, city, ROUND(fit_score) AS fit_score,
+               CASE recommendation WHEN 'APPLY' THEN 'Apply' ELSE 'Worth a try' END AS fit_band,
+               array_join(slice(matched_skills, 1, 6), ', ') AS highlight_skills,
+               array_join(slice(missing_skills, 1, 4), ', ') AS missing_skills,
+               years_required, first_seen, days_open, url
+        FROM {T}.v_job_market
+        WHERE is_open AND recommendation IN ('APPLY', 'STRETCH')
+        ORDER BY recommendation, fit_score DESC, first_seen DESC"""),
+    ("ds_resume", "What to change on my resume", f"""
+        -- From the scoring task (src/jobpilot/advice.py): open-market demand turned into resume actions.
+        SELECT skill, action, status, must_postings, all_postings, priority
+        FROM {T}.gold_resume_actions
+        WHERE priority <= 4
+        ORDER BY priority, must_postings DESC, all_postings DESC"""),
     ("ds_unknown_skills", "Skills the matcher doesn't recognise", f"""
         -- Terms the LLM extracted that aren't in the skill vocabulary (src/jobpilot/skills.py).
         -- Each one currently counts as a gap. Real terms that keep appearing should be added there.
@@ -160,6 +177,8 @@ def multi_filter(title, field, datasets, x, y):
 
 
 OPEN = ["`is_open`"]
+STATED_DOMAIN = ["`domain` <> 'Not stated'"]          # unknown industry says nothing: keep it off domain charts
+STATED_SENIORITY = ["`seniority` <> 'Not stated'"]
 SCORED = ["`is_enriched`"]   # fit figures only make sense for postings the LLM has read
 pct = {"type": "number-percent", "decimalPlaces": {"type": "max", "places": 0}}
 ALL_MARKET = ["mv_market", "ds_market", "ds_skills", "ds_gaps", "ds_skill_flags"]   # datasets the filters apply to
@@ -190,12 +209,40 @@ overview = [
     bar("Top skills in open postings (colour = do I have it?)", "ds_skills", "skill", "`skill`",
         "postings", "COUNT(DISTINCT `job_key`)", 0, 11, 4, 7, color="skill_status",
         cat_label="Skill", val_label="Postings requiring it"),
-    bar("Open postings by domain", "mv_market", "domain", "`domain`", "postings", measure("open_postings"),
-        4, 11, 2, 7, filters=OPEN + SCORED, cat_label="Domain", val_label="Open postings"),
+    bar("Open postings by industry", "mv_market", "domain", "`domain`", "postings", measure("open_postings"),
+        4, 11, 2, 7, filters=OPEN + SCORED + STATED_DOMAIN, cat_label="Industry", val_label="Open postings"),
     table("Best-matching open roles", "ds_market",
           [("company", "Company"), ("title", "Role"), ("city", "City"), ("fit_score", "Fit (0-100)"),
            ("recommendation", "Fit band"), ("years_required", "Years asked"), ("url", "Link")],
           0, 18, 6, 6, filters=OPEN + ["`recommendation` <> 'SKIP'"]),
+]
+
+# The page that answers "where do I apply, and what do I change?" First tab on purpose.
+where_page = [
+    text(["# Where to apply, and what to change on my resume"], 0, 0, 6, 1),
+    text(["Open roles scored against my profile every morning. **Apply** = fit 70+ with years and location OK; "
+          "**Worth a try** = fit 50-69 or a near miss. *Highlight* = skills the posting asks for that I have: lead with "
+          "these in the tailored resume. The resume table turns what open postings require into changes to make."],
+         0, 1, 6, 1),
+    multi_filter("City", "city", ["mv_market", "ds_apply"], 0, 2),
+    counter("Strong-fit roles open", "mv_market", "strong_fit_postings", measure("strong_fit_postings"), 0, 3, filters=OPEN),
+    counter("Worth-a-try roles open", "mv_market", "stretch_postings", measure("stretch_postings"), 1, 3, filters=OPEN),
+    counter("Companies with a strong fit", "mv_market", "companies_with_strong_fit",
+            measure("companies_with_strong_fit"), 2, 3, filters=OPEN),
+    counter("New in the last 7 days", "mv_market", "new_this_week", measure("new_this_week"), 3, 3, filters=OPEN),
+    counter("Best fit score", "mv_market", "best_fit_score", measure("best_fit_score"), 4, 3, filters=OPEN),
+    counter("Postings analysed by the LLM", "mv_market", "enrichment_coverage", measure("enrichment_coverage"),
+            5, 3, fmt=pct, filters=OPEN),
+    bar("Companies with the most strong-fit openings", "mv_market", "company", "`company`", "strong",
+        measure("strong_fit_postings"), 0, 5, 3, 7, filters=OPEN + ["`recommendation` = 'APPLY'"],
+        cat_label="Company", val_label="Strong-fit openings"),
+    table("What to change on my resume", "ds_resume",
+          [("action", "Action"), ("skill", "Skill"), ("must_postings", "Open postings requiring it"),
+           ("all_postings", "Asking for it"), ("status", "Status")], 3, 5, 3, 7),
+    table("Apply list: open roles, best fit first", "ds_apply",
+          [("company", "Company"), ("title", "Role"), ("city", "City"), ("fit_score", "Fit"), ("fit_band", "Band"),
+           ("highlight_skills", "Highlight on resume"), ("missing_skills", "Missing"),
+           ("years_required", "Years asked"), ("days_open", "Days on board"), ("url", "Link")], 0, 12, 6, 9),
 ]
 
 fit_page = [
@@ -209,10 +256,10 @@ fit_page = [
     bar("Most common gaps (required skills I don't list)", "ds_gaps", "skill", "`skill`", "postings",
         "COUNT(DISTINCT `job_key`)", 2, 2, 4, 5, color="skill_status",
         cat_label="Skill", val_label="Postings requiring it"),
-    bar("Average fit by domain", "mv_market", "domain", "`domain`", "avg_fit", measure("avg_fit_score"),
-        0, 7, 3, 5, filters=OPEN + SCORED, cat_label="Domain", val_label="Average fit score"),
+    bar("Average fit by industry", "mv_market", "domain", "`domain`", "avg_fit", measure("avg_fit_score"),
+        0, 7, 3, 5, filters=OPEN + SCORED + STATED_DOMAIN, cat_label="Industry", val_label="Average fit score"),
     bar("Average fit by seniority", "mv_market", "seniority", "`seniority`", "avg_fit", measure("avg_fit_score"),
-        3, 7, 3, 5, filters=OPEN + SCORED, cat_label="Seniority", val_label="Average fit score"),
+        3, 7, 3, 5, filters=OPEN + SCORED + STATED_SENIORITY, cat_label="Seniority", val_label="Average fit score"),
 ]
 
 health_page = [
@@ -234,6 +281,7 @@ dashboard = {
     "datasets": ([{"name": n, "displayName": d, "asset_name": a} for n, d, a in METRIC_VIEWS]
                  + [{"name": n, "displayName": d, "queryLines": [q.strip()]} for n, d, q in DATASETS]),
     "pages": [
+        {"name": "apply", "displayName": "Where to apply", "layout": where_page, "pageType": "PAGE_TYPE_CANVAS"},
         {"name": "market", "displayName": "Market overview", "layout": overview, "pageType": "PAGE_TYPE_CANVAS"},
         {"name": "fit", "displayName": "My fit and gaps", "layout": fit_page, "pageType": "PAGE_TYPE_CANVAS"},
         {"name": "health", "displayName": "Pipeline health", "layout": health_page, "pageType": "PAGE_TYPE_CANVAS"},

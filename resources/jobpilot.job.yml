@@ -36,3 +36,29 @@ resources:
         - task_key: quality_gate
           depends_on: [{task_key: semantic_layer}]
           notebook_task: {notebook_path: ../notebooks/50_quality_checks.py}
+
+    # Runs right after every deploy (from CI), so tables and views always match the code that was just
+    # deployed. Without it, a deploy could ship a dashboard before the columns or views it reads exist
+    # (it happened twice on 6 Oct). Cheap and safe: no fetching, no LLM calls, every task is idempotent.
+    jobpilot_post_deploy:
+      name: jobpilot-post-deploy
+      description: >
+        After each deploy: add any new columns (setup), recompute scores and resume advice (score_jobs),
+        rebuild views and metric views (semantic_layer). Started by the ci workflow.
+      max_concurrent_runs: 1
+      timeout_seconds: 1800
+      email_notifications:
+        on_failure: ["${var.alert_email}"]
+      parameters:
+        - {name: catalog, default: "${var.catalog}"}
+        - {name: schema, default: "${var.schema}"}
+        - {name: llm_endpoint, default: "${var.llm_endpoint}"}
+      tasks:
+        - task_key: setup
+          notebook_task: {notebook_path: ../notebooks/00_setup.py}
+        - task_key: score_jobs
+          depends_on: [{task_key: setup}]
+          notebook_task: {notebook_path: ../notebooks/20_score_jobs.py}
+        - task_key: semantic_layer
+          depends_on: [{task_key: score_jobs}]
+          notebook_task: {notebook_path: ../notebooks/30_semantic_layer.py}
