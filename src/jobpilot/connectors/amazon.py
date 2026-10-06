@@ -34,6 +34,7 @@ def parse(job: dict, company: str = "Amazon") -> dict:
 
 
 def fetch(board, title_keywords, locations, pause=0.5, get=None) -> list:
+    title_keywords = ats.title_keywords_for(board, title_keywords)
     get = get or ats._http_json
     out, seen = [], set()
     for query in board.get("search_texts") or ["data engineer"]:

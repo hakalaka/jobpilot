@@ -73,6 +73,14 @@ def parse_lever(payload: list, company: str) -> list:
     return out
 
 
+def title_keywords_for(board: dict, title_keywords):
+    """The title keywords to apply on this board. trust_search: true switches them off: use it when the
+    server-side search is already specific (e.g. "databricks") and returns few results, because banks and
+    big tech title roles generically ("Software Engineer III") and the title check would throw them away.
+    The location filter still applies, and enrichment + scoring decide relevance downstream."""
+    return [] if board.get("trust_search") else title_keywords
+
+
 def matches_filters(rec: dict, title_keywords, locations) -> bool:
     """Keep jobs whose title has any keyword AND whose location matches any wanted location."""
     title = rec["title"].lower()
@@ -187,7 +195,8 @@ def parse_workday_detail(payload: dict, board: dict) -> dict:
     info = payload.get("jobPostingInfo") or {}
     country = (info.get("country") or {}).get("descriptor") or ""
     city = info.get("location") or ""
-    location = ", ".join(x for x in (city, country) if x)
+    # Some tenants already put the country in the city text ("Hyderabad, India"): don't repeat it.
+    location = city if country and country.lower() in city.lower() else ", ".join(x for x in (city, country) if x)
     return _record("workday", board["company"], info.get("jobReqId") or info.get("jobPostingId"),
                    info.get("title"), location, info.get("externalUrl"),
                    clean_workday_description(info.get("jobDescription", ""), board["company"]),
@@ -197,6 +206,7 @@ def parse_workday_detail(payload: dict, board: dict) -> dict:
 def fetch_workday(board: dict, title_keywords, locations, pause: float = 0.5, get=None) -> list:
     """List pages (server-side filtered), keep matching titles, then fetch details for those only."""
     get = get or _http_json
+    title_keywords = title_keywords_for(board, title_keywords)
     base, wanted = workday_base(board), []
     # No facets in the config: find the country filter from the tenant's own facet list (one request).
     facets = board.get("facets")
