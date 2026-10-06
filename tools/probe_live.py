@@ -7,7 +7,7 @@ cfg = yaml.safe_load(open("config/sources.yaml"))
 out = pathlib.Path("probe_out"); out.mkdir(exist_ok=True)
 report = []
 for b in cfg["boards"]:
-    if b["source"] in ("greenhouse", "lever") or b["company"] == "Accenture" or b["company"] in ("Amazon", "EY", "Netflix", "State Street", "Cigna", "Citi", "Mastercard", "Thermo Fisher Scientific", "AstraZeneca", "Morgan Stanley"):
+    if b["source"] in ("greenhouse", "lever") or b["company"] == "Accenture" or b["company"] not in ("JPMorgan Chase", "Salesforce"):
         continue
     t = time.time()
     try:
