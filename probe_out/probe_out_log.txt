@@ -1,60 +1,18 @@
-amazon_search                            200 application/json; charset=utf- 91302 bytes
-microsoft_eightfold_list                 403                                25 bytes
-microsoft_gcs_list                       0                                174 bytes
-netflix_eightfold_list                   200 application/json               21529 bytes
-jpmc_oracle_list                         200 application/json               22495 bytes
-jpmc_oracle_detail                       200 application/json               10972 bytes
-ey_sf_search_html                        200 text/html;charset=UTF-8        208265 bytes
-ey_sf_sitemap                            200 text/xml;charset=UTF-8         1862643 bytes
-wd_pwc_facets                            200 application/json               43916 bytes
-wd_statestreet_facets                    200 application/json               15744 bytes
-wd_statestreet_india_databricks          200 application/json               5428 bytes
-wd_cigna_facets                          200 application/json               8330 bytes
-wd_cigna_india_databricks                200 application/json               5732 bytes
-wd_walmart_facets                        422                                36 bytes
-wd_nvidia_facets                         200 application/json               16400 bytes
-wd_nvidia_india_databricks               400                                27 bytes
-wd_mastercard_facets                     200 application/json               17201 bytes
-wd_salesforce_facets                     200 application/json               21123 bytes
-wd_salesforce_india_databricks           200 application/json               4018 bytes
-wd_citi_facets                           200 application/json               66407 bytes
-wd_citi_india_databricks                 200 application/json               6235 bytes
-wd_wf_facets                             200 application/json               102362 bytes
-wd_wf_india_databricks                   400                                27 bytes
-wd_fmr_facets                            200 application/json               32817 bytes
-wd_fmr_india_databricks                  400                                27 bytes
-wd_novartis_facets                       200 application/json               6478 bytes
-wd_novartis_india_databricks             400                                27 bytes
-wd_gsk_facets                            200 application/json               50581 bytes
-wd_gsk_india_databricks                  200 application/json               432 bytes
-wd_astrazeneca_facets                    200 application/json               23832 bytes
-wd_elevancehealth_facets                 200 application/json               31040 bytes
-wd_hsbc_facets                           422                                36 bytes
-wd_db_facets                             200 application/json               10528 bytes
-wd_db_india_databricks                   200 application/json               894 bytes
-wd_ms_facets                             200 application/json               39674 bytes
-wd_ms_india_databricks                   200 application/json               2178 bytes
-wd_barclays_facets                       200 application/json               11721 bytes
-wd_philips_facets                        200 application/json               46813 bytes
-wd_philips_india_databricks              400                                27 bytes
-wd_thermofisher_facets                   200 application/json               50596 bytes
-{'company': 'PwC', 'host': 'pwc.wd3.myworkdayjobs.com', 'tenant': 'pwc', 'site': 'Global_Experienced_Careers', 'reachable': True, 'india_facet': None, 'databricks_india_total': None}
-{'company': 'State Street', 'host': 'statestreet.wd1.myworkdayjobs.com', 'tenant': 'statestreet', 'site': 'Global', 'reachable': True, 'india_facet': ('Location_Country', 'c4f78be1a8f14da0ab49ce1162348a5e'), 'databricks_india_total': 13}
-{'company': 'Cigna', 'host': 'cigna.wd5.myworkdayjobs.com', 'tenant': 'cigna', 'site': 'cignacareers', 'reachable': True, 'india_facet': ('Location_Country', 'c4f78be1a8f14da0ab49ce1162348a5e'), 'databricks_india_total': 18}
-{'company': 'Walmart', 'host': 'walmart.wd5.myworkdayjobs.com', 'tenant': 'walmart', 'site': 'WalmartExternal', 'reachable': False, 'india_facet': None, 'databricks_india_total': None}
-{'company': 'NVIDIA', 'host': 'nvidia.wd5.myworkdayjobs.com', 'tenant': 'nvidia', 'site': 'NVIDIAExternalCareerSite', 'reachable': True, 'india_facet': ('locationMainGroup', '2fcb99c455831013ea52b82135ba3266'), 'databricks_india_total': None}
-{'company': 'Mastercard', 'host': 'mastercard.wd1.myworkdayjobs.com', 'tenant': 'mastercard', 'site': 'CorporateCareers', 'reachable': True, 'india_facet': None, 'databricks_india_total': None}
-{'company': 'Salesforce', 'host': 'salesforce.wd12.myworkdayjobs.com', 'tenant': 'salesforce', 'site': 'External_Career_Site', 'reachable': True, 'india_facet': ('CF_-_REC_-_LRV_-_Job_Posting_Anchor_-_Country_from_Job_Posting_Location_Extended', 'c4f78be1a8f14da0ab49ce1162348a5e'), 'databricks_india_total': 3}
-{'company': 'Citi', 'host': 'citi.wd5.myworkdayjobs.com', 'tenant': 'citi', 'site': '2', 'reachable': True, 'india_facet': ('Country_and_Jurisdiction', 'c4f78be1a8f14da0ab49ce1162348a5e'), 'databricks_india_total': 17}
-{'company': 'Wells Fargo', 'host': 'wd1.myworkdaysite.com', 'tenant': 'wf', 'site': 'WellsFargoJobs', 'reachable': True, 'india_facet': ('locationMainGroup', 'c4f78be1a8f14da0ab49ce1162348a5e'), 'databricks_india_total': None}
-{'company': 'Fidelity', 'host': 'fmr.wd1.myworkdayjobs.com', 'tenant': 'fmr', 'site': 'FidelityCareers', 'reachable': True, 'india_facet': ('locationMainGroup', 'c4f78be1a8f14da0ab49ce1162348a5e'), 'databricks_india_total': None}
-{'company': 'Novartis', 'host': 'novartis.wd3.myworkdayjobs.com', 'tenant': 'novartis', 'site': 'Novartis_Careers', 'reachable': True, 'india_facet': ('locationMainGroup', 'c4f78be1a8f14da0ab49ce1162348a5e'), 'databricks_india_total': None}
-{'company': 'GSK', 'host': 'gsk.wd5.myworkdayjobs.com', 'tenant': 'gsk', 'site': 'GSKCareers', 'reachable': True, 'india_facet': ('Location_Country', 'c4f78be1a8f14da0ab49ce1162348a5e'), 'databricks_india_total': 0}
-{'company': 'AstraZeneca', 'host': 'astrazeneca.wd3.myworkdayjobs.com', 'tenant': 'astrazeneca', 'site': 'Careers', 'reachable': True, 'india_facet': None, 'databricks_india_total': None}
-{'company': 'Elevance Health', 'host': 'elevancehealth.wd1.myworkdayjobs.com', 'tenant': 'elevancehealth', 'site': 'ANT', 'reachable': True, 'india_facet': None, 'databricks_india_total': None}
-{'company': 'HSBC', 'host': 'hsbc.wd3.myworkdayjobs.com', 'tenant': 'hsbc', 'site': 'external', 'reachable': False, 'india_facet': None, 'databricks_india_total': None}
-{'company': 'Deutsche Bank', 'host': 'db.wd3.myworkdayjobs.com', 'tenant': 'db', 'site': 'DBWebSite', 'reachable': True, 'india_facet': ('Country', 'c4f78be1a8f14da0ab49ce1162348a5e'), 'databricks_india_total': 1}
-{'company': 'Morgan Stanley', 'host': 'ms.wd5.myworkdayjobs.com', 'tenant': 'ms', 'site': 'External', 'reachable': True, 'india_facet': ('Location_Country', 'c4f78be1a8f14da0ab49ce1162348a5e'), 'databricks_india_total': 2}
-{'company': 'Barclays', 'host': 'barclays.wd3.myworkdayjobs.com', 'tenant': 'barclays', 'site': 'External_Career_Site_Barclays', 'reachable': True, 'india_facet': None, 'databricks_india_total': None}
-{'company': 'Philips', 'host': 'philips.wd3.myworkdayjobs.com', 'tenant': 'philips', 'site': 'jobs-and-careers', 'reachable': True, 'india_facet': ('locationMainGroup', '6e1b2a934716103c2adde1d57e7700ea'), 'databricks_india_total': None}
-{'company': 'Thermo Fisher', 'host': 'thermofisher.wd5.myworkdayjobs.com', 'tenant': 'thermofisher', 'site': 'ThermoFisherCareers', 'reachable': True, 'india_facet': None, 'databricks_india_total': None}
+ey_sf_search_databricks                  200 text/html;charset=UTF-8        205972 bytes
+ey_sf_detail                             200 text/html;charset=UTF-8        191511 bytes
+wipro_sf_search                          200 text/html;charset=UTF-8        124038 bytes
+capgemini_search                         200 text/html; charset=utf-8       199374 bytes
+netflix_list_india                       200 application/json               18631 bytes
+netflix_detail                           200 application/json               7579 bytes
+jpmc_india_databricks                    200 application/json               30825 bytes
+jpmc_india_data_engineer                 200 application/json               43194 bytes
+wd2_wf                                   200 application/json               7881 bytes
+    wf total: 63 ['Bengaluru, India', 'Bengaluru, India', 'Hyderabad, India']
+wd2_fmr                                  200 application/json               2865 bytes
+    fmr total: 6 ['2 Locations', 'Bangalore, Karnataka', 'Block 1 DT, Chennai India']
+wd2_novartis                             200 application/json               8238 bytes
+    novartis total: 24 ['Hyderabad (Office)', 'Hyderabad (Office)', 'Hyderabad (Office)']
+wd2_nvidia                               200 application/json               9179 bytes
+    nvidia total: 129 ['2 Locations', '5 Locations', 'India, Bengaluru']
+wd2_thermofisher                         200 application/json               24004 bytes
+    thermofisher total: 111 ['Bangalore, India', 'Bangalore, India', 'Hyderabad, India']
