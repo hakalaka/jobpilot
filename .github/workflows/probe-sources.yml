@@ -1,0 +1,20 @@
+name: probe-sources
+# TEMPORARY: runs only on the probe/* branch. Calls candidate career-site APIs from a GitHub runner
+# (open internet) and commits the raw responses back to the same branch. Deleted after use.
+on:
+  push:
+    branches: ["probe/**"]
+    paths: ["tools/probe_sources.py", ".github/workflows/probe-sources.yml"]
+permissions: {contents: write}
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.11"}
+      - run: python tools/probe_sources.py | tee probe_out_log.txt
+      - run: |
+          mkdir -p probe_out && mv probe_out_log.txt probe_out/
+          git config user.name "probe-bot" && git config user.email "probe-bot@users.noreply.github.com"
+          git add probe_out && git commit -m "probe results [skip ci]" && git push
