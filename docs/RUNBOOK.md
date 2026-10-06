@@ -32,6 +32,7 @@ How JobPilot runs, how you know it's healthy, and what to do when it isn't.
 | You changed the extraction prompt | Old postings were made with the old prompt | Bump `EXTRACTION_VERSION` in `src/jobpilot/prompts.py` (the test reminds you). The next runs re-extract old postings, new postings first, `max_extract` per run. |
 | `duplicate_postings_in_silver` failed | Key logic changed | Check recent changes to `job_key` in `ats.py`. Silver is a materialized view, so a fix plus a pipeline full refresh rebuilds it. |
 | Pipeline update failed | Bad file in the landing zone | Pipeline event log → error. Move the bad file out of `raw/inbox/`; Auto Loader won't re-read processed files. |
+| Deploy fails: `dashboard "job_market" has been modified remotely` | Someone edited or saved the dashboard in the UI (the repo is the source of truth) | Want to keep the UI edit? Pull it into code: `databricks bundle generate dashboard --resource job_market --force`, then port it into `tools/build_dashboard.py` and push. Don't want it? **Actions → ci → Run workflow →** tick *Overwrite dashboard edits made in the UI*. |
 | Dashboard empty | Pipeline or scoring hasn't run yet | Run `jobpilot-daily` manually. |
 | App stopped | Free Edition stops apps after 24 hours | Compute → Apps → jobpilot → Start. |
 

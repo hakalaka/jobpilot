@@ -5,6 +5,14 @@ on:
     branches: [main]
   pull_request:
   workflow_dispatch:
+    inputs:
+      overwrite_remote_changes:
+        # The repo is the source of truth for the dashboard. If someone edits it in the UI, the next
+        # deploy stops with "modified remotely" so the change isn't lost by accident. Tick this to
+        # deliberately throw those UI edits away and deploy the code version (bundle deploy --force).
+        description: "Overwrite dashboard edits made in the UI (deploy --force)"
+        type: boolean
+        default: false
 
 concurrency:
   group: deploy-${{ github.ref }}
@@ -35,4 +43,5 @@ jobs:
         run: databricks bundle validate -t prod
       - name: Deploy bundle
         if: github.ref == 'refs/heads/main'
-        run: databricks bundle deploy -t prod
+        # --force only when someone chose it on a manual run; normal pushes keep the safety check.
+        run: databricks bundle deploy -t prod ${{ inputs.overwrite_remote_changes && '--force' || '' }}
