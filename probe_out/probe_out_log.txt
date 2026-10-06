@@ -1,0 +1,61 @@
+  State Street: location filter {'Location_Country': ['c4f78be1a8f14da0ab49ce1162348a5e']}
+  State Street 'databricks': 13 results on the server
+  State Street: 3 matching titles in 1 list page(s); fetching details
+{"company": "State Street", "source": "workday", "postings": 3, "seconds": 5, "error": "", "sample": {"title": "Delivery Lead \u2013 Data Engineering & Databricks - Assistant Vice President", "location": "Hyderabad, India, India", "posted_at": "2026-09-30", "url": "https://statestreet.wd1.myworkdayjobs.com/Global/job/Hyderabad-India/Delivery-Lead---Data-Engineering---Databricks---Assistant-Vice-President_R-797498", "raw_text": 2620}, "short_text": 0}
+  Cigna: location filter {'Location_Country': ['c4f78be1a8f14da0ab49ce1162348a5e']}
+  Cigna 'databricks': 19 results on the server
+  Cigna: 6 matching titles in 1 list page(s); fetching details
+{"company": "Cigna", "source": "workday", "postings": 6, "seconds": 8, "error": "", "sample": {"title": "Data Engineering Advisor - HIH - Evernorth", "location": "Hyderabad, India, India", "posted_at": "2026-09-28", "url": "https://cigna.wd5.myworkdayjobs.com/cignacareers/job/Hyderabad-India/Data-Engineering-Advisor---HIH---Evernorth_26011328", "raw_text": 3597}, "short_text": 0}
+  Citi: location filter {'Country_and_Jurisdiction': ['c4f78be1a8f14da0ab49ce1162348a5e']}
+  Citi 'databricks': 17 results on the server
+  Citi: 6 matching titles in 1 list page(s); fetching details
+{"company": "Citi", "source": "workday", "postings": 6, "seconds": 10, "error": "", "sample": {"title": "Senior Databricks Engineer, Apache Spark and AWS - Vice President", "location": "Pune Maharashtra India, India", "posted_at": "2026-08-25", "url": "https://citi.wd5.myworkdayjobs.com/2/job/Pune-Maharashtra-India/Senior-Databricks-Engineer--Apache-Spark-and-AWS---Vice-President_26988514", "raw_text": 4379}, "short_text": 0}
+  Wells Fargo: location filter {'locationCountry': ['c4f78be1a8f14da0ab49ce1162348a5e']}
+  Wells Fargo 'databricks': 2 results on the server
+  Wells Fargo: 0 matching titles in 1 list page(s); fetching details
+{"company": "Wells Fargo", "source": "workday", "postings": 0, "seconds": 3, "error": "", "sample": null, "short_text": 0}
+  Fidelity: location filter {'locationCountry': ['c4f78be1a8f14da0ab49ce1162348a5e']}
+  Fidelity 'databricks': 0 results on the server
+  Fidelity: 0 matching titles in 1 list page(s); fetching details
+{"company": "Fidelity", "source": "workday", "postings": 0, "seconds": 1, "error": "", "sample": null, "short_text": 0}
+  Novartis: location filter {'locationCountry': ['c4f78be1a8f14da0ab49ce1162348a5e']}
+  Novartis 'databricks': 2 results on the server
+  Novartis: 0 matching titles in 1 list page(s); fetching details
+{"company": "Novartis", "source": "workday", "postings": 0, "seconds": 2, "error": "", "sample": null, "short_text": 0}
+  NVIDIA: location filter {'locationHierarchy1': ['2fcb99c455831013ea52b82135ba3266']}
+  NVIDIA 'databricks': 0 results on the server
+  NVIDIA: 0 matching titles in 1 list page(s); fetching details
+{"company": "NVIDIA", "source": "workday", "postings": 0, "seconds": 2, "error": "", "sample": null, "short_text": 0}
+  Thermo Fisher Scientific: location filter {'locations': ['8991183e0f2310019d4ccbbf3e760000', 'fc837035319310019d46f21f7b7d0000', 'c140a6578f1a10019d28b049c3fa0000', '6609626fa31510019d449c18da6c0000', '6609626fa31510019d4619a6501b0000', 'ed4d76dbefe910019d4264f637340000', '34f9267ed65810019d596ba9ed860000', 'c140a6578f1a10019d2979767ec30000', 'fc837035319310019d4233ea907f0000', 'b2591be32ceb10019d422c5d3d5e0000', 'c140a6578f1a10019d22b4f570d50000', 'a6abbf7cd1c110019d618341992a0000']}
+  Thermo Fisher Scientific 'databricks': 11 results on the server
+  Thermo Fisher Scientific: 7 matching titles in 1 list page(s); fetching details
+{"company": "Thermo Fisher Scientific", "source": "workday", "postings": 7, "seconds": 9, "error": "", "sample": {"title": "Sr. Data Platform Engineer", "location": "Bangalore, India, India", "posted_at": "2026-10-01", "url": "https://thermofisher.wd5.myworkdayjobs.com/ThermoFisherCareers/job/Bangalore-India/Sr-Data-Platform-Engineer_R-01370119-1", "raw_text": 6681}, "short_text": 0}
+  Mastercard: location filter {'locations': ['8eab563831bf10acb5d384310bb7d5ec', '8eab563831bf10acb97b7fba5feff76e', '2e83df2db0851073b1d3be60012912d5', '8eab563831bf10acb9d6f1103d78fa67', '8eab563831bf10acbb7b5bf86d570af1', '4a21bf4e5285455eb8a0037a87adf523', '28905a74db1b10019f5bb16c36030000', '8eab563831bf10acbc722e4859721571', '8ffae25149e210718ae5b2e1cb1993bb', '85a5bdf4e1831035984400a2fb698c94']}
+  Mastercard 'databricks': 24 results on the server
+  Mastercard: 12 matching titles in 2 list page(s); fetching details
+{"company": "Mastercard", "source": "workday", "postings": 12, "seconds": 15, "error": "", "sample": {"title": "Lead Data Engineer", "location": "Pune, India, India", "posted_at": "2026-10-06", "url": "https://mastercard.wd1.myworkdayjobs.com/CorporateCareers/job/Pune-India/Lead-Data-Engineer_R-280352", "raw_text": 6350}, "short_text": 0}
+  AstraZeneca: location filter {'locations': ['2c1433a5f2960105bea682732237fbc7', 'f3d89509ad0b102de2bc63a063d5793f', 'b914f96b1779102cc96cca6c6ad7ad40', '6f41cead329e10012e9f545f30710000', 'b914f96b1779102cc97003ec79c2b016']}
+  AstraZeneca 'databricks': 2 results on the server
+  AstraZeneca: 1 matching titles in 1 list page(s); fetching details
+{"company": "AstraZeneca", "source": "workday", "postings": 1, "seconds": 3, "error": "", "sample": {"title": "Director \u2013 Enterprise Data Engineering", "location": "India - Chennai, India", "posted_at": "2026-09-30", "url": "https://astrazeneca.wd3.myworkdayjobs.com/Careers/job/India---Chennai/Director---Enterprise-Data-Engineering-Lead-_R-256947-1", "raw_text": 7003}, "short_text": 0}
+  Salesforce: location filter {'CF_-_REC_-_LRV_-_Job_Posting_Anchor_-_Country_from_Job_Posting_Location_Extended': ['c4f78be1a8f14da0ab49ce1162348a5e']}
+  Salesforce 'databricks': 3 results on the server
+  Salesforce: 0 matching titles in 1 list page(s); fetching details
+{"company": "Salesforce", "source": "workday", "postings": 0, "seconds": 2, "error": "", "sample": null, "short_text": 0}
+  Morgan Stanley: location filter {'Location_Country': ['c4f78be1a8f14da0ab49ce1162348a5e']}
+  Morgan Stanley 'databricks': 2 results on the server
+  Morgan Stanley: 1 matching titles in 1 list page(s); fetching details
+{"company": "Morgan Stanley", "source": "workday", "postings": 1, "seconds": 3, "error": "", "sample": {"title": "Middle Office Data Engineering and Quality_Vice President_Product Support & Services IM", "location": "Mumbai, India, India", "posted_at": "2026-07-13", "url": "https://ms.wd5.myworkdayjobs.com/External/job/Mumbai-India/Middle-Office-Data-Engineering-and-Quality-Vice-President-Product-Support---Services-IM_PT-JR037229-1", "raw_text": 7658}, "short_text": 0}
+  Deutsche Bank: location filter {'Country': ['c4f78be1a8f14da0ab49ce1162348a5e']}
+  Deutsche Bank 'databricks': 1 results on the server
+  Deutsche Bank: 0 matching titles in 1 list page(s); fetching details
+{"company": "Deutsche Bank", "source": "workday", "postings": 0, "seconds": 2, "error": "", "sample": null, "short_text": 0}
+  Amazon 'data engineer': 118 results, 36 kept so far
+{"company": "Amazon", "source": "amazon", "postings": 36, "seconds": 2, "error": "", "sample": {"title": "Business Intelligence Engineer, eCS Data Engineering and Analytics", "location": "Bengaluru, India", "posted_at": "2026-10-05", "url": "https://www.amazon.jobs/en/jobs/10569363/business-intelligence-engineer-ecs-data-engineering-and-analytics", "raw_text": 3965}, "short_text": 0}
+  JPMorgan Chase 'databricks': 17 results (location filter 300000000289360)
+  JPMorgan Chase 'data engineer': 133 results (location filter 300000000289360)
+{"company": "JPMorgan Chase", "source": "oracle", "postings": 0, "seconds": 2, "error": "", "sample": null, "short_text": 0}
+  EY 'databricks': 43 results, 8 matching titles
+{"company": "EY", "source": "successfactors", "postings": 8, "seconds": 20, "error": "", "sample": {"title": "EY - GDS Consulting - AI And DATA - Databricks Architect - Senior Manager", "location": "Pune, India", "posted_at": "2026-10-03", "url": "https://careers.ey.com/ey/job/Pune-EY-GDS-Consulting-AI-And-DATA-Databricks-Architect-Senior-Manager-MH-411014/1444096433/", "raw_text": 7539}, "short_text": 0}
+  Netflix: 0 matching titles; fetching details
+{"company": "Netflix", "source": "eightfold", "postings": 0, "seconds": 1, "error": "", "sample": null, "short_text": 0}
