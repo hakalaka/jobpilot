@@ -1,0 +1,32 @@
+[
+ {
+  "company": "Salesforce",
+  "source": "workday",
+  "postings": 3,
+  "seconds": 4,
+  "error": "",
+  "sample": {
+   "title": "Senior Technical Consultant - Agentforce (Salesforce development exp mandatory)",
+   "location": "India - Bangalore",
+   "posted_at": "2026-09-21",
+   "url": "https://salesforce.wd12.myworkdayjobs.com/External_Career_Site/job/India---Bangalore/Senior-Technical-Consultant_JR357486",
+   "raw_text": 9841
+  },
+  "short_text": 0
+ },
+ {
+  "company": "JPMorgan Chase",
+  "source": "oracle",
+  "postings": 17,
+  "seconds": 16,
+  "error": "",
+  "sample": {
+   "title": "Analytics Solutions Senior Associate",
+   "location": "Bengaluru, Karnataka, India",
+   "posted_at": "2026-10-05",
+   "url": "https://jpmc.fa.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1001/job/210795433",
+   "raw_text": 2617
+  },
+  "short_text": 0
+ }
+]
