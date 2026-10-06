@@ -1,0 +1,74 @@
+{
+ "total": 1540,
+ "jobPostings": [],
+ "facets": [
+  {
+   "facetParameter": "jobFamilyGroup",
+   "descriptor": "Job Family Group",
+   "values": []
+  },
+  {
+   "facetParameter": "jobFamily",
+   "descriptor": "Job Family",
+   "values": []
+  },
+  {
+   "facetParameter": "timeType",
+   "descriptor": "Full-time/Part-time",
+   "values": []
+  },
+  {
+   "facetParameter": "workerSubType",
+   "descriptor": "Employee Type",
+   "values": []
+  },
+  {
+   "facetParameter": "locationMainGroup",
+   "descriptor": null,
+   "values": [
+    {
+     "facetParameter": "locationHierarchy1",
+     "descriptor": "Region",
+     "values": []
+    },
+    {
+     "facetParameter": "locationCountry",
+     "descriptor": "Country",
+     "values": [
+      {
+       "descriptor": "India",
+       "id": "c4f78be1a8f14da0ab49ce1162348a5e",
+       "count": 106
+      },
+      {
+       "descriptor": "United States of America",
+       "id": "bc33aa3152ec42d4995f4791a106ed09",
+       "count": 1331
+      }
+     ]
+    },
+    {
+     "facetParameter": "locationRegionStateProvince",
+     "descriptor": "State",
+     "values": []
+    },
+    {
+     "facetParameter": "locations",
+     "descriptor": "City",
+     "values": [
+      {
+       "descriptor": "Bengaluru, India",
+       "id": "bddaef21b52c01016acd172f97db0000",
+       "count": 70
+      },
+      {
+       "descriptor": "Hyderabad, India",
+       "id": "bddaef21b52c01016acaf37b87fe0000",
+       "count": 42
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

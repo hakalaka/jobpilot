@@ -1,7 +1,9 @@
-"""Public job-board APIs (Greenhouse, Lever, Workday) -> one normalized record shape.
+"""Public job-board APIs -> one normalized record shape.
 
-Both APIs are public and read-only for job listings; applying through them needs
-the employer's private key, so this project only READS jobs. You apply yourself.
+Greenhouse, Lever and Workday live here; the other platforms (Amazon, Eightfold, Oracle Recruiting,
+SuccessFactors) are in src/jobpilot/connectors/. Every connector returns the same record (_record), so
+everything downstream is source-agnostic. All endpoints are public and read-only: this project only
+READS jobs. You apply yourself.
 """
 import hashlib
 import html
@@ -94,6 +96,20 @@ def _http_json(url: str, body: dict = None, timeout: int = 30):
         return json.loads(r.read().decode("utf-8"))
 
 
+def _http_text(url: str, timeout: int = 30) -> str:
+    """GET a web page as text (for career sites that only serve HTML)."""
+    req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT, "Accept": "text/html,*/*;q=0.5"})
+    with urllib.request.urlopen(req, timeout=timeout) as r:
+        return r.read().decode("utf-8", errors="replace")
+
+
+def strip_boilerplate(text: str, markers) -> str:
+    """Cut the text at the first employer-boilerplate marker ("About EY", "Equal Opportunity Employer"...).
+    Fewer tokens for the LLM, and no boilerplate words in the skill counts."""
+    cut = min((i for i in (text.find(m) for m in markers) if i > 0), default=len(text))
+    return text[:cut].strip()
+
+
 def fetch(source: str, token: str, timeout: int = 30):
     """Download one Greenhouse or Lever board."""
     url = (GREENHOUSE_URL if source == "greenhouse" else LEVER_URL).format(token=token)
@@ -117,12 +133,52 @@ def workday_base(board: dict) -> str:
 
 
 def clean_workday_description(html_text: str, company: str) -> str:
-    """HTML to text, then cut employer boilerplate (company blurb, equal-opportunity statement).
-    Fewer tokens for the LLM step, and no boilerplate skills polluting skill counts."""
-    text = html_to_text(html_text)
-    markers = [f"About {company}", "Equal Employment Opportunity", "Equal Opportunity Employer"]
-    cut = min((i for i in (text.find(m) for m in markers) if i > 0), default=len(text))
-    return text[:cut].strip()
+    """HTML to text, then cut employer boilerplate (company blurb, equal-opportunity statement)."""
+    return strip_boilerplate(html_to_text(html_text),
+                             [f"About {company}", "Equal Employment Opportunity", "Equal Opportunity Employer"])
+
+
+# A location value counts as "in the country" when the country is a whole word in it: "Bangalore, India" and
+# "India - Chennai" match, "Indianapolis" and "Indiana" don't.
+def _in_country(descriptor: str, country: str) -> bool:
+    return re.search(rf"(?<![a-z]){re.escape(country.lower())}(?![a-z])", str(descriptor).lower()) is not None
+
+
+def discover_country_facets(base: str, country: str = "India", get=None) -> dict:
+    """Find this tenant's location filter for `country`, so a new Workday company needs no hand-copied IDs.
+
+    Every tenant names and nests its location filter differently (seen across 20 companies):
+      - a country facet at the top:           Location_Country / Country_and_Jurisdiction -> "India"
+      - a country facet nested in a group:    locationMainGroup -> locationCountry -> "India"
+      - only city-level values:               locationMainGroup -> locations -> "Pune, India", "India - Chennai"
+    Prefer an exact country match (one ID); otherwise take every city in the country. One extra request.
+    Returns appliedFacets, e.g. {"locationCountry": ["c4f7..."]}, or {} if nothing matched.
+    """
+    get = get or _http_json
+    page = get(f"{base}/jobs", {"appliedFacets": {}, "limit": 1, "offset": 0, "searchText": ""})
+    exact, cities = [], {}
+
+    def walk(facets):
+        for f in facets or []:
+            param = f.get("facetParameter")
+            for v in f.get("values") or []:
+                if isinstance(v.get("values"), list):          # a nested group: its children have their own parameter
+                    walk([v])
+                    continue
+                name = str(v.get("descriptor", "")).strip()
+                if name.lower() == country.lower():
+                    exact.append((param, v.get("id")))
+                elif _in_country(name, country):
+                    cities.setdefault(param, []).append(v.get("id"))
+
+    walk(page.get("facets"))
+    if exact:
+        param, value = exact[0]
+        return {param: [value]}
+    if cities:
+        param = max(cities, key=lambda p: len(cities[p]))     # the facet holding most of the country's cities
+        return {param: cities[param]}
+    return {}
 
 
 def parse_workday_detail(payload: dict, board: dict) -> dict:
@@ -142,6 +198,12 @@ def fetch_workday(board: dict, title_keywords, locations, pause: float = 0.5, ge
     """List pages (server-side filtered), keep matching titles, then fetch details for those only."""
     get = get or _http_json
     base, wanted = workday_base(board), []
+    # No facets in the config: find the country filter from the tenant's own facet list (one request).
+    facets = board.get("facets")
+    if facets is None:
+        facets = discover_country_facets(base, board.get("country", "India"), get)
+        print(f"  {board['company']}: location filter {facets or 'not found, relying on the title and location filters'}",
+              flush=True)
     max_jobs = int(board.get("max_jobs", 300))
     max_pages = int(board.get("max_pages", 15))   # results are relevance-sorted: early pages matter most
     name = board["company"]
@@ -150,7 +212,7 @@ def fetch_workday(board: dict, title_keywords, locations, pause: float = 0.5, ge
     for search in search_texts:
         offset, total, pages = 0, None, 0
         while (total is None or offset < min(total, WORKDAY_TOTAL_CAP)) and pages < max_pages:
-            body = {"appliedFacets": board.get("facets", {}), "limit": WORKDAY_PAGE,
+            body = {"appliedFacets": facets, "limit": WORKDAY_PAGE,
                     "offset": offset, "searchText": search}
             page = get(f"{base}/jobs", body)
             pages += 1
@@ -188,8 +250,12 @@ def fetch_workday(board: dict, title_keywords, locations, pause: float = 0.5, ge
 
 # ------------------------------------------------------------- dispatch -----
 def fetch_and_parse(board: dict, title_keywords, locations) -> list:
-    if board["source"] == "workday":
-        return fetch_workday(board, title_keywords, locations)
+    """One entry point for every source: config/sources.yaml says which connector reads each board."""
+    from .connectors import amazon, eightfold, oracle, successfactors   # imported here: they import this module
+    connectors = {"workday": fetch_workday, "amazon": amazon.fetch, "eightfold": eightfold.fetch,
+                  "oracle": oracle.fetch, "successfactors": successfactors.fetch}
+    if board["source"] in connectors:
+        return connectors[board["source"]](board, title_keywords, locations)
     payload = fetch(board["source"], board["token"])
     parser = parse_greenhouse if board["source"] == "greenhouse" else parse_lever
     return [r for r in parser(payload, board["company"]) if matches_filters(r, title_keywords, locations)]
