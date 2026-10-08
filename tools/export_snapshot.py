@@ -72,7 +72,7 @@ QUERIES = {
     # Row-level lists (not metrics) still read the commented view directly.
     "roles": f"""
         SELECT company, title, city, ROUND(fit_score) AS fit_score, recommendation, url
-        FROM {T}.v_job_market WHERE is_open AND recommendation <> 'SKIP'
+        FROM {T}.v_job_market WHERE is_open AND recommendation <> 'SKIP' AND days_since_posted <= 30
         ORDER BY fit_score DESC, first_seen DESC LIMIT 15""",
 }
 

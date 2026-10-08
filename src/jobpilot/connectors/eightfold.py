@@ -10,6 +10,7 @@ import urllib.parse
 from datetime import datetime, timezone
 
 from .. import ats
+from ..incremental import no_state
 
 PAGE = 10   # Eightfold returns 10 per page
 
@@ -24,9 +25,10 @@ def parse_detail(d: dict, board: dict) -> dict:
                        location, d.get("canonicalPositionUrl"), text, posted)
 
 
-def fetch(board, title_keywords, locations, pause=0.5, get=None) -> list:
+def fetch(board, title_keywords, locations, pause=0.5, get=None, known=None) -> list:
     title_keywords = ats.title_keywords_for(board, title_keywords)
     get = get or ats._http_json
+    known = known or no_state()
     base, domain = f"https://{board['host']}/api/apply/v2/jobs", board["domain"]
     wanted, seen = [], set()
     for query in board.get("search_texts") or ["data engineer"]:
@@ -49,8 +51,12 @@ def fetch(board, title_keywords, locations, pause=0.5, get=None) -> list:
     print(f"  {board['company']}: {len(wanted)} matching titles; fetching details", flush=True)
     out = []
     for pid in wanted[: int(board.get("max_jobs", 100))]:
-        rec = parse_detail(get(f"{base}/{pid}?{urllib.parse.urlencode({'domain': domain})}", None), board)
+        rec = known.reuse(pid)                       # known and fresh: no detail call
+        if rec is None:
+            rec = known.full(parse_detail(get(f"{base}/{pid}?{urllib.parse.urlencode({'domain': domain})}", None),
+                                          board), pid)
+            time.sleep(pause)
         if ats.matches_filters(rec, title_keywords, locations):
             out.append(rec)
-        time.sleep(pause)
+    print(f"  {board['company']}: {known.fetched} fetched in full, {known.reused} already known", flush=True)
     return out
