@@ -16,15 +16,25 @@ jobs:
       DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
       DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
       LANDING: dbfs:/Volumes/workspace/jobpilot/raw/inbox/ats/
+      RUNS: dbfs:/Volumes/workspace/jobpilot/raw/runs/
+      STATE: dbfs:/Volumes/workspace/jobpilot/raw/state/known_postings.json
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: {python-version: "3.11"}
       - run: pip install pyyaml
-      - name: Fetch today's postings
-        run: python tools/fetch_jobs.py | tee out_log.txt
-      - run: tail -n 1 out_log.txt >> "$GITHUB_STEP_SUMMARY"
       - uses: databricks/setup-cli@main
+      - name: Download known postings (incremental state)
+        # Exported by the Databricks job (task export_fetch_state). Missing on the first run: then every
+        # job is fetched in full, which is also the safe fallback if the download fails.
+        run: |
+          mkdir -p state
+          databricks fs cp "$STATE" state/known_postings.json 2> err.txt \
+            && echo "State: $(jq '.postings | length' state/known_postings.json) known postings" >> "$GITHUB_STEP_SUMMARY" \
+            || echo "No state file yet: full fetch" >> "$GITHUB_STEP_SUMMARY"
+      - name: Fetch today's postings
+        run: python tools/fetch_jobs.py --state state/known_postings.json | tee out_log.txt
+      - run: tail -n 1 out_log.txt >> "$GITHUB_STEP_SUMMARY"
       - name: Land file in the volume
         run: |
           f=$(ls out/ats_*.jsonl)
@@ -34,6 +44,10 @@ jobs:
             echo "::error title=Landing failed::$(tr '\n' ' ' < err.txt)"; exit 1
           fi
           echo "Landed $(basename "$f")" >> "$GITHUB_STEP_SUMMARY"
+          # The per-board run log goes to its own folder (it has a different shape from postings)
+          r=$(ls out/runs_*.jsonl)
+          databricks fs mkdir "$RUNS" 2>/dev/null || true
+          databricks fs cp "$r" "$RUNS$(basename "$r")" && echo "Landed $(basename "$r")" >> "$GITHUB_STEP_SUMMARY"
       - name: Start the pipeline job
         run: |
           id=$(databricks jobs list --name "jobpilot-daily" --output json | jq -r '.[0].job_id')

@@ -33,6 +33,9 @@ How JobPilot runs, how you know it's healthy, and what to do when it isn't.
 | `duplicate_postings_in_silver` failed | Key logic changed | Check recent changes to `job_key` in `ats.py`. Silver is a materialized view, so a fix plus a pipeline full refresh rebuilds it. |
 | Pipeline update failed | Bad file in the landing zone | Pipeline event log → error. Move the bad file out of `raw/inbox/`; Auto Loader won't re-read processed files. |
 | Deploy fails: `dashboard "job_market" has been modified remotely` | Someone edited or saved the dashboard in the UI (the repo is the source of truth) | Want to keep the UI edit? Pull it into code: `databricks bundle generate dashboard --resource job_market --force`, then port it into `tools/build_dashboard.py` and push. Don't want it? **Actions → ci → Run workflow →** tick *Overwrite dashboard edits made in the UI*. |
+| Pipeline update fails on a schema change in `bronze_job_snapshots` (e.g. after new columns were added) | A streaming table that can't evolve its schema in place | Pipeline → **Full refresh** of `bronze_job_snapshots` (or Full refresh all). Safe: every landed file is still in `raw/inbox`, so bronze is rebuilt exactly. |
+| Need every description re-downloaded (e.g. after a parser fix) | The incremental fetch skips jobs fetched in the last 7 days | Delete `raw/state/known_postings.json` in the volume. The next fetch downloads everything in full; `export_fetch_state` rebuilds the file afterwards. |
+| Fetch suddenly slow, *Already known* near 0 | The state file wasn't downloaded or wasn't exported | Check the daily-ingest summary line ("State: N known postings") and the `export_fetch_state` task in the last job run. Safe either way: without state, everything is fetched in full. |
 | Dashboard empty | Pipeline or scoring hasn't run yet | Run `jobpilot-daily` manually. |
 | App stopped | Free Edition stops apps after 24 hours | Compute → Apps → jobpilot → Start. |
 

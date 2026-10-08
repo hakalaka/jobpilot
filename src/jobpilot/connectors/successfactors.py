@@ -13,6 +13,7 @@ import urllib.parse
 from datetime import datetime
 
 from .. import ats
+from ..incremental import no_state
 
 PAGE = 25
 COUNTRY_NAMES = {"IN": "India"}
@@ -55,9 +56,10 @@ def parse_detail(html: str, path: str, board: dict) -> dict:
                        _itemprop(html, "title"), location, f"https://{board['host']}{path}", text, posted)
 
 
-def fetch(board, title_keywords, locations, pause=1.0, get_text=None) -> list:
+def fetch(board, title_keywords, locations, pause=1.0, get_text=None, known=None) -> list:
     title_keywords = ats.title_keywords_for(board, title_keywords)
     get_text = get_text or ats._http_text
+    known = known or no_state()
     base = f"https://{board['host']}{board.get('path', '')}/search/"
     wanted, seen = [], set()
     for query in board.get("search_texts") or ["data engineer"]:
@@ -77,8 +79,11 @@ def fetch(board, title_keywords, locations, pause=1.0, get_text=None) -> list:
         print(f"  {board['company']} '{query}': {total} results, {len(wanted)} matching titles", flush=True)
     out = []
     for path in wanted[: int(board.get("max_jobs", 60))]:
-        rec = parse_detail(get_text(f"https://{board['host']}{path}"), path, board)
+        rec = known.reuse(path)                      # known and fresh: no page fetch
+        if rec is None:
+            rec = known.full(parse_detail(get_text(f"https://{board['host']}{path}"), path, board), path)
+            time.sleep(pause)
         if ats.matches_filters(rec, title_keywords, locations):
             out.append(rec)
-        time.sleep(pause)
+    print(f"  {board['company']}: {known.fetched} fetched in full, {known.reused} already known", flush=True)
     return out

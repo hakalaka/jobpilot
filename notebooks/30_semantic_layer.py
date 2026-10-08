@@ -49,7 +49,11 @@ CREATE OR REPLACE VIEW {T}.v_job_market (
   is_enriched COMMENT 'True once the LLM has read the posting and it has a fit score. Market counts include every posting; fit and skill figures only enriched ones',
   from_largest_company COMMENT 'True if the posting is from the company with the most open postings. Use it to check whether one employer dominates a figure',
   domain_detail COMMENT 'Industry text exactly as the LLM extracted it (domain is the cleaned group)',
-  matched_skills COMMENT 'Skills the posting asks for that I have: the ones to highlight when applying'
+  matched_skills COMMENT 'Skills the posting asks for that I have: the ones to highlight when applying',
+  posted_date COMMENT 'Date the employer posted the job (from the career site); null if the site does not say',
+  days_since_posted COMMENT 'Days since the job was posted; when the site gives no date, days since we first saw it',
+  posting_age COMMENT 'New (7 days or less), Recent (8-30 days) or Older (over 30 days). Older jobs are often filled or evergreen',
+  last_full_fetch COMMENT 'Last day the full description was downloaded (incremental fetch re-downloads weekly)'
 )
 COMMENT 'India data-engineering job market: one row per valid posting, with requirements and my fit score once enriched'
 AS
@@ -105,7 +109,11 @@ WITH postings AS (
     r.cloud, r.must_have_skills,
     g.fit_score, g.recommendation, g.missing_skills, g.learning_gaps, g.matched_skills,
     p.is_open, p.first_seen, p.last_seen, p.days_seen, p.source, p.url,
-    (r.job_key IS NOT NULL AND g.job_key IS NOT NULL) AS is_enriched
+    (r.job_key IS NOT NULL AND g.job_key IS NOT NULL) AS is_enriched,
+    p.posted_date, p.last_full_fetch,
+    -- Age from the employer's posting date when the site gives one, else from when we first saw it.
+    -- current_date() is evaluated when the view is QUERIED, so ages are always today's, not the run day's.
+    DATEDIFF(current_date(), COALESCE(p.posted_date, p.first_seen)) AS days_since_posted
   FROM {T}.silver_postings p
   LEFT JOIN {T}.silver_job_requirements r USING (job_key)
   LEFT JOIN {T}.gold_job_fit g USING (job_key)
@@ -137,7 +145,12 @@ SELECT
   p.must_have_skills, p.fit_score, p.recommendation, p.missing_skills, p.learning_gaps,
   p.is_open, p.first_seen, p.last_seen, p.days_seen, p.source, p.url, p.is_enriched,
   p.company IN (SELECT company FROM largest_company) AS from_largest_company,
-  p.domain_detail, p.matched_skills
+  p.domain_detail, p.matched_skills,
+  p.posted_date, p.days_since_posted,
+  CASE WHEN p.days_since_posted <= 7  THEN 'New (7 days or less)'
+       WHEN p.days_since_posted <= 30 THEN 'Recent (8-30 days)'
+       ELSE 'Older (over 30 days)' END,
+  p.last_full_fetch
 FROM postings p
 """)
 
@@ -194,6 +207,11 @@ dimensions:
   - name: first_seen_week
     expr: DATE_TRUNC('WEEK', first_seen)
     display_name: Week first seen
+  - name: posting_age
+    expr: posting_age
+    display_name: Posting age
+    synonyms: [freshness, how old, posted]
+    comment: New (7 days or less), Recent (8-30 days) or Older (over 30 days), from the employer's posting date.
   - name: title
     expr: title
     synonyms: [role, position, opening]
@@ -237,6 +255,10 @@ measures:
   - name: best_fit_score
     expr: MAX(fit_score)
     display_name: Best fit score
+  - name: older_open_postings
+    expr: COUNT(DISTINCT job_key) FILTER (WHERE is_open AND days_since_posted > 30)
+    display_name: Open postings older than 30 days
+    comment: Still on the career site but posted over 30 days ago; often filled or evergreen. Hidden from the apply list.
   - name: strong_fit_rate
     # Denominator = enriched postings only: an unscored posting is "unknown", not "not a fit".
     # NULLIF on every ratio: SQL warehouses run in ANSI mode, where x / 0 is an error, not null.
