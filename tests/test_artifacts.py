@@ -122,3 +122,26 @@ def test_public_export_only_uses_metric_view_dimensions():
                 assert word in dims, f"{name}: {word!r} is not a dimension of {view} (dimensions: {sorted(dims)})"
                 checked += 1
     assert checked >= 5
+
+
+def test_post_deploy_job_rebuilds_every_layer_the_semantic_layer_reads():
+    # 8 Oct: the post-deploy job skipped the pipeline, so a new silver column (posted_date) didn't exist
+    # yet when semantic_layer ran. Rule: it must run the same layers, in the same order, as the daily job,
+    # minus fetching and LLM steps.
+    import yaml
+    jobs = yaml.safe_load((ROOT / "resources" / "jobpilot.job.yml").read_text())["resources"]["jobs"]
+
+    def order(job):
+        tasks = {t["task_key"]: [d["task_key"] for d in t.get("depends_on", [])] for t in job["tasks"]}
+        done, out = set(), []
+        while len(out) < len(tasks):
+            for k, deps in tasks.items():
+                if k not in done and all(d in done for d in deps):
+                    done.add(k)
+                    out.append(k)
+        return out
+
+    post = order(jobs["jobpilot_post_deploy"])
+    assert post == ["setup", "ingest_pipeline", "score_jobs", "semantic_layer"]
+    daily = [t for t in order(jobs["jobpilot_daily"]) if t in post]
+    assert daily == post                                   # same layers, same order as the daily run
