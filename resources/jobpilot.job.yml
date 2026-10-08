@@ -47,8 +47,9 @@ resources:
     jobpilot_post_deploy:
       name: jobpilot-post-deploy
       description: >
-        After each deploy: add any new columns (setup), recompute scores and resume advice (score_jobs),
-        rebuild views and metric views (semantic_layer). Started by the ci workflow.
+        After each deploy: add any new columns (setup), refresh the pipeline so silver and gold get any new
+        columns (no new files = nothing re-read, only the views recompute), recompute scores and resume
+        advice (score_jobs), rebuild views and metric views (semantic_layer). Started by the ci workflow.
       max_concurrent_runs: 1
       timeout_seconds: 1800
       email_notifications:
@@ -60,8 +61,14 @@ resources:
       tasks:
         - task_key: setup
           notebook_task: {notebook_path: ../notebooks/00_setup.py}
-        - task_key: score_jobs
+        - task_key: ingest_pipeline
+          # Every layer the semantic layer reads must be rebuilt from the new code first. Without this,
+          # a deploy that adds a silver column (posted_date, 8 Oct) fails here: the view asks for a
+          # column the old silver doesn't have yet.
           depends_on: [{task_key: setup}]
+          pipeline_task: {pipeline_id: "${resources.pipelines.jobpilot_ingest.id}"}
+        - task_key: score_jobs
+          depends_on: [{task_key: ingest_pipeline}]
           notebook_task: {notebook_path: ../notebooks/20_score_jobs.py}
         - task_key: semantic_layer
           depends_on: [{task_key: score_jobs}]
