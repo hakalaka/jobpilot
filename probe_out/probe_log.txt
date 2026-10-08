@@ -1,0 +1,32 @@
+  Cigna: location filter {'Location_Country': ['c4f78be1a8f14da0ab49ce1162348a5e']}
+  Cigna 'databricks': 19 results on the server
+  Cigna: 19 matching titles in 1 list page(s); fetching details
+  Cigna: 19 fetched in full, 0 already known (detail call skipped)
+  Mastercard: location filter {'locations': ['8eab563831bf10acb97b7fba5feff76e', '2e83df2db0851073b1d3be60012912d5', '8eab563831bf10acb9d6f1103d78fa67', '8eab563831bf10acbb7b5bf86d570af1', '4a21bf4e5285455eb8a0037a87adf523', '28905a74db1b10019f5bb16c36030000', '8eab563831bf10acbc722e4859721571', '8ffae25149e210718ae5b2e1cb1993bb', '85a5bdf4e1831035984400a2fb698c94']}
+  Mastercard 'databricks': 27 results on the server
+  Mastercard: 27 matching titles in 2 list page(s); fetching details
+  Mastercard: 25/27 checked
+  Mastercard: 27 fetched in full, 0 already known (detail call skipped)
+  JPMorgan Chase 'databricks': 21 results (location filter 300000000289360)
+  JPMorgan Chase: 21 fetched in full, 0 already known
+  EY 'databricks': 49 results, 49 matching titles
+  EY: 49 fetched in full, 0 already known
+  Cigna: location filter {'Location_Country': ['c4f78be1a8f14da0ab49ce1162348a5e']}
+  Cigna 'databricks': 19 results on the server
+  Cigna: 19 matching titles in 1 list page(s); fetching details
+  Cigna: 0 fetched in full, 19 already known (detail call skipped)
+  Mastercard: location filter {'locations': ['8eab563831bf10acb97b7fba5feff76e', '2e83df2db0851073b1d3be60012912d5', '8eab563831bf10acb9d6f1103d78fa67', '8eab563831bf10acbb7b5bf86d570af1', '4a21bf4e5285455eb8a0037a87adf523', '28905a74db1b10019f5bb16c36030000', '8eab563831bf10acbc722e4859721571', '8ffae25149e210718ae5b2e1cb1993bb', '85a5bdf4e1831035984400a2fb698c94']}
+  Mastercard 'databricks': 27 results on the server
+  Mastercard: 27 matching titles in 2 list page(s); fetching details
+  Mastercard: 25/27 checked
+  Mastercard: 1 fetched in full, 26 already known (detail call skipped)
+  JPMorgan Chase 'databricks': 21 results (location filter 300000000289360)
+  JPMorgan Chase: 0 fetched in full, 21 already known
+  EY 'databricks': 49 results, 49 matching titles
+  EY: 0 fetched in full, 49 already known
+
+RESULT
+Cigna            run1:  19 postings,  19 detail calls,  19.1s | run2:  19 postings,   0 detail calls,  19 reused,   2.3s | same job_keys: True
+Mastercard       run1:  26 postings,  27 detail calls,  34.7s | run2:  26 postings,   1 detail calls,  26 reused,   4.8s | same job_keys: True
+JPMorgan Chase   run1:  21 postings,  21 detail calls,  18.9s | run2:  21 postings,   0 detail calls,  21 reused,   1.5s | same job_keys: True
+EY               run1:  49 postings,  49 detail calls, 112.0s | run2:  49 postings,   0 detail calls,  49 reused,   4.3s | same job_keys: True
