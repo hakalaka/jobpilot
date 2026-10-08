@@ -13,6 +13,8 @@ import time
 import urllib.request
 from datetime import datetime, timezone
 
+from .incremental import no_state
+
 GREENHOUSE_URL = "https://boards-api.greenhouse.io/v1/boards/{token}/jobs?content=true"
 LEVER_URL = "https://api.lever.co/v0/postings/{token}?mode=json"
 
@@ -34,6 +36,9 @@ def html_to_text(s: str) -> str:
 
 
 def _record(source, company, source_id, title, location, url, text, posted_at=None):
+    """The one record shape every connector returns. list_ref = the job's ID as seen in the board's LIST
+    response (what the incremental fetch remembers); fetch_mode = 'full' (description fetched) or
+    'seen' (still open, description skipped because we already have it: see incremental.py)."""
     return {
         "job_key": job_key(source, company, str(source_id)),
         "source": source,
@@ -45,6 +50,8 @@ def _record(source, company, source_id, title, location, url, text, posted_at=No
         "raw_text": text or "",
         "posted_at": posted_at,
         "ingested_at": datetime.now(timezone.utc).isoformat(),
+        "list_ref": str(source_id),
+        "fetch_mode": "full",
     }
 
 
@@ -208,9 +215,11 @@ def parse_workday_detail(payload: dict, board: dict) -> dict:
                    info.get("startDate"))
 
 
-def fetch_workday(board: dict, title_keywords, locations, pause: float = 0.5, get=None) -> list:
-    """List pages (server-side filtered), keep matching titles, then fetch details for those only."""
+def fetch_workday(board: dict, title_keywords, locations, pause: float = 0.5, get=None, known=None) -> list:
+    """List pages (server-side filtered), keep matching titles, then fetch details only for jobs we
+    don't already know (known = incremental.BoardState; None = fetch everything in full)."""
     get = get or _http_json
+    known = known or no_state()
     title_keywords = title_keywords_for(board, title_keywords)
     base, wanted = workday_base(board), []
     # No facets in the config: find the country filter from the tenant's own facet list (one request).
@@ -254,23 +263,30 @@ def fetch_workday(board: dict, title_keywords, locations, pause: float = 0.5, ge
     print(f"  {name}: {len(wanted)} matching titles in {pages} list page(s); fetching details", flush=True)
     records = []
     for i, path in enumerate(wanted, 1):
-        rec = parse_workday_detail(get(f"{base}{path}", None), board)
+        rec = known.reuse(path)                      # fetched in full recently? then no detail call
+        if rec is None:
+            rec = known.full(parse_workday_detail(get(f"{base}{path}", None), board), path)
+            time.sleep(pause)
         if matches_filters(rec, title_keywords, locations):
             records.append(rec)
         if i % 25 == 0:
-            print(f"  {name}: {i}/{len(wanted)} details", flush=True)
-        time.sleep(pause)
+            print(f"  {name}: {i}/{len(wanted)} checked", flush=True)
+    print(f"  {name}: {known.fetched} fetched in full, {known.reused} already known (detail call skipped)", flush=True)
     return records
 
 
 # ------------------------------------------------------------- dispatch -----
-def fetch_and_parse(board: dict, title_keywords, locations) -> list:
-    """One entry point for every source: config/sources.yaml says which connector reads each board."""
+def fetch_and_parse(board: dict, title_keywords, locations, known=None) -> list:
+    """One entry point for every source: config/sources.yaml says which connector reads each board.
+    known: incremental.BoardState for this board. Only connectors that pay a detail call per job use it;
+    Greenhouse, Lever and Amazon return descriptions in the list, so there's nothing to skip."""
     from .connectors import amazon, eightfold, oracle, successfactors   # imported here: they import this module
     connectors = {"workday": fetch_workday, "amazon": amazon.fetch, "eightfold": eightfold.fetch,
                   "oracle": oracle.fetch, "successfactors": successfactors.fetch}
     if board["source"] in connectors:
-        return connectors[board["source"]](board, title_keywords, locations)
+        if board["source"] == "amazon":
+            return connectors["amazon"](board, title_keywords, locations)
+        return connectors[board["source"]](board, title_keywords, locations, known=known)
     payload = fetch(board["source"], board["token"])
     parser = parse_greenhouse if board["source"] == "greenhouse" else parse_lever
     return [r for r in parser(payload, board["company"]) if matches_filters(r, title_keywords, locations)]

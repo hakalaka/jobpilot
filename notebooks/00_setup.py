@@ -24,7 +24,9 @@ T = f"{CAT}.{SCH}"
 spark.sql(f"CREATE SCHEMA IF NOT EXISTS {T} COMMENT 'JobPilot: the data-engineering job market as a lakehouse'")
 spark.sql(f"CREATE VOLUME IF NOT EXISTS {T}.raw COMMENT 'Landing zone: daily job-board snapshots and pasted JDs'")
 spark.sql(f"CREATE VOLUME IF NOT EXISTS {T}.private COMMENT 'Private: master profile, saved links, generated resumes'")
+# inbox = postings the pipeline loads; runs = fetch audit log (own table); state = incremental-fetch handoff
 for d in [f"/Volumes/{CAT}/{SCH}/raw/inbox/ats", f"/Volumes/{CAT}/{SCH}/raw/inbox/manual",
+          f"/Volumes/{CAT}/{SCH}/raw/runs", f"/Volumes/{CAT}/{SCH}/raw/state",
           f"/Volumes/{CAT}/{SCH}/private/resumes"]:
     dbutils.fs.mkdirs(d)
 
