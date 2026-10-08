@@ -66,7 +66,8 @@ QUERIES = {
         GROUP BY 1 ORDER BY postings DESC LIMIT 10""",
     "sources": f"""
         SELECT source_platform AS platform, MEASURE(open_postings) AS postings, MEASURE(companies) AS companies
-        FROM {T}.mv_job_market WHERE is_open AND source <> 'manual'
+        -- A metric view exposes only its dimensions and measures: filter on source_platform, not the raw source column.
+        FROM {T}.mv_job_market WHERE is_open AND source_platform <> 'Pasted JD'
         GROUP BY source_platform ORDER BY postings DESC""",
     # Row-level lists (not metrics) still read the commented view directly.
     "roles": f"""

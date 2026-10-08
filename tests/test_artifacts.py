@@ -90,3 +90,35 @@ def test_dashboard_only_uses_measures_and_dimensions_that_exist():
                         assert col in dims, f"{item['widget']['name']}: no dimension {col!r} in {mv_datasets[ds]}"
                         checked += 1
     assert checked > 10
+
+
+SQL_WORDS = {"select", "from", "where", "and", "or", "not", "as", "group", "by", "order", "desc", "asc", "limit",
+             "measure", "is", "null", "in", "case", "when", "then", "else", "end", "coalesce", "nullif", "date_sub",
+             "current_date", "cross", "join", "on", "max", "min", "count", "distinct", "true", "false", "having", "k", "x"}
+
+
+def test_public_export_only_uses_metric_view_dimensions():
+    # Broke the public page on 6-7 Oct: a query on mv_job_market filtered on `source`, a raw column the
+    # metric view doesn't expose (its dimension is source_platform). Querying a metric view, you can only
+    # name its dimensions and MEASURE() its measures; this checks every such query in the export.
+    import re
+    exp = _load(ROOT / "tools" / "export_snapshot.py")
+    views = _metric_views()
+    checked = 0
+    for name, sql in exp.QUERIES.items():
+        for view in re.findall(r"\.(mv_\w+)", sql):
+            # the part of the query that reads this metric view: from its SELECT to the end of its block
+            block = sql[: sql.index(view)].rsplit("SELECT", 1)[-1] + sql[sql.index(view):].split(")", 1)[0]
+            block = re.sub(r"--[^\n]*", " ", block)                     # comments
+            block = re.sub(r"'[^']*'", " ", block)                      # string literals
+            block = re.sub(r"MEASURE\((\w+)\)", " ", block)             # measures are checked below
+            dims, measures = views[view]
+            for m in re.findall(r"MEASURE\((\w+)\)", sql):
+                assert m in measures, f"{name}: no measure {m!r} in {view}"
+            aliases = set(re.findall(r"\bAS\s+(\w+)", block, re.I))
+            for word in re.findall(r"\b[a-z_][a-z0-9_]*\b", block.split(view, 1)[1] if view in block else block):
+                if word.lower() in SQL_WORDS or word in aliases or word.isdigit():
+                    continue
+                assert word in dims, f"{name}: {word!r} is not a dimension of {view} (dimensions: {sorted(dims)})"
+                checked += 1
+    assert checked >= 5
