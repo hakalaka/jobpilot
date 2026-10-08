@@ -1,0 +1,19 @@
+name: probe-sources
+# TEMPORARY (probe/* branches only): run the incremental fetch twice against real career sites.
+on:
+  push:
+    branches: ["probe/**"]
+    paths: ["tools/probe_incremental.py", ".github/workflows/probe-sources.yml"]
+permissions: {contents: write}
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.11"}
+      - run: pip install pyyaml && python tools/probe_incremental.py 2>&1 | tee probe_log.txt
+      - run: |
+          mkdir -p probe_out && mv probe_log.txt probe_out/
+          git config user.name "probe-bot" && git config user.email "probe-bot@users.noreply.github.com"
+          git add probe_out && git commit -m "probe results [skip ci]" && git push
