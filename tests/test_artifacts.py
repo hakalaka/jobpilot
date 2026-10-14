@@ -40,17 +40,23 @@ def test_dashboard_json_is_up_to_date_and_consistent():
                 assert r in fields, f"{w['name']}: encoding uses {r} but query has {sorted(fields)}"
 
 
+def _public_queries():
+    """The public snapshot's queries (src/jobpilot/public_snapshot.py), as the daily job runs them."""
+    import sys
+    sys.path.insert(0, str(ROOT / "src"))
+    from jobpilot.public_snapshot import queries
+    return queries("workspace.jobpilot")
+
+
 def test_public_export_never_reads_private_data():
-    exp = _load(ROOT / "tools" / "export_snapshot.py")
-    sql = " ".join(exp.QUERIES.values()).lower()
+    sql = " ".join(_public_queries().values()).lower()
     for private in ("applications", "v_my_applications", "job_leads", "/private", "master_profile"):
         assert private not in sql, f"public snapshot must not touch {private}"
 
 
 def test_snapshot_page_handles_sample_data():
     data = json.loads((ROOT / "tests" / "fixtures" / "site_data.json").read_text())
-    exp = _load(ROOT / "tools" / "export_snapshot.py")
-    assert set(exp.QUERIES) <= set(data), "sample data must cover every exported query"
+    assert set(_public_queries()) <= set(data), "sample data must cover every exported query"
 
 
 def _metric_views():
@@ -102,10 +108,9 @@ def test_public_export_only_uses_metric_view_dimensions():
     # metric view doesn't expose (its dimension is source_platform). Querying a metric view, you can only
     # name its dimensions and MEASURE() its measures; this checks every such query in the export.
     import re
-    exp = _load(ROOT / "tools" / "export_snapshot.py")
     views = _metric_views()
     checked = 0
-    for name, sql in exp.QUERIES.items():
+    for name, sql in _public_queries().items():
         for view in re.findall(r"\.(mv_\w+)", sql):
             # the part of the query that reads this metric view: from its SELECT to the end of its block
             block = sql[: sql.index(view)].rsplit("SELECT", 1)[-1] + sql[sql.index(view):].split(")", 1)[0]
@@ -145,3 +150,18 @@ def test_post_deploy_job_rebuilds_every_layer_the_semantic_layer_reads():
     assert post == ["setup", "ingest_pipeline", "score_jobs", "semantic_layer"]
     daily = [t for t in order(jobs["jobpilot_daily"]) if t in post]
     assert daily == post                                   # same layers, same order as the daily run
+
+
+def test_no_automated_step_uses_the_sql_warehouse():
+    # 14 Oct: the SQL warehouse was 47% of compute, mostly woken by automation (two SQL alerts and the
+    # public-page export). Rule: scheduled workflows and bundle resources never query a SQL warehouse;
+    # it's only for people (dashboard, Genie). The dashboard and the app may reference it.
+    import yaml
+    assert not (ROOT / "resources" / "jobpilot.alerts.yml").exists(), "SQL alerts wake the warehouse daily"
+    for wf in (ROOT / ".github" / "workflows").glob("*.yml"):
+        text = wf.read_text()
+        triggers = yaml.safe_load(text).get(True, {})
+        if isinstance(triggers, dict) and "schedule" in triggers:
+            for banned in ("export_snapshot.py", "statement_execution", "warehouses"):
+                assert banned not in text, f"{wf.name} is scheduled and uses the SQL warehouse ({banned})"
+
