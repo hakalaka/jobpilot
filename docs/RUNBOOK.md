@@ -8,14 +8,23 @@ How JobPilot runs, how you know it's healthy, and what to do when it isn't.
 |---|---|---|
 | 07:00 | `daily-ingest` Action snapshots every verified career board and lands one `.jsonl` file in `raw/inbox/ats/` | GitHub Actions |
 | 07:05 | The Action starts `jobpilot-daily` | Databricks Jobs |
-| ~07:05-07:30 | setup → Lakeflow pipeline → enrich (LLM) → score → semantic layer → quality gate (+ private resume tailoring) | Databricks |
-| 09:00 | `publish-snapshot` Action exports the public market view to GitHub Pages | GitHub Actions |
-| 11:00 | Alerts check freshness and the quality gate | Databricks SQL alerts |
+| ~07:05-07:30 | setup → Lakeflow pipeline → export fetch state + enrich (LLM) → score → semantic layer → quality gate → export public snapshot (+ private resume tailoring) | Databricks |
+| 09:00 | `publish-snapshot` Action downloads `raw/public/data.json` and publishes it to GitHub Pages (no SQL warehouse) | GitHub Actions |
+
+GitHub's schedule often starts these runs hours late; nothing depends on the exact time.
+
+**Compute budget (Free Edition quota):** no automated step uses the SQL warehouse. It bills every minute it's on,
+plus its auto-stop tail, and on 14 Oct it was 47% of all compute, mostly from two SQL alerts and the public export
+waking it daily. Both are gone: the quality gate already alerts by failing the job, and the export runs inside the
+job. The warehouse is only woken by a person (dashboard, Genie). A test enforces it. To see usage:
+`SELECT usage_date, billing_origin_product, SUM(usage_quantity) FROM system.billing.usage GROUP BY ALL ORDER BY 1 DESC`.
 
 ## How you get told
 
 - **Job failure:** email from Databricks (`email_notifications.on_failure`).
-- **Stale data / failed quality gate:** SQL alert emails at 11:00.
+- **Failed quality gate:** the gate fails the job, so the same Databricks failure email.
+- **Stale data (the job never ran):** `daily-ingest` fails in GitHub, and GitHub emails you. The next day's
+  quality gate also fails `fresh_board_snapshot_days` if no new snapshot arrived for 2 days.
 - **Action failure:** GitHub emails the repo owner.
 - **At a glance:** the dashboard's **Pipeline health** page.
 
@@ -36,6 +45,7 @@ How JobPilot runs, how you know it's healthy, and what to do when it isn't.
 | Pipeline update fails on a schema change in `bronze_job_snapshots` (e.g. after new columns were added) | A streaming table that can't evolve its schema in place | Pipeline → **Full refresh** of `bronze_job_snapshots` (or Full refresh all). Safe: every landed file is still in `raw/inbox`, so bronze is rebuilt exactly. |
 | Need every description re-downloaded (e.g. after a parser fix) | The incremental fetch skips jobs fetched in the last 7 days | Delete `raw/state/known_postings.json` in the volume. The next fetch downloads everything in full; `export_fetch_state` rebuilds the file afterwards. |
 | Fetch suddenly slow, *Already known* near 0 | The state file wasn't downloaded or wasn't exported | Check the daily-ingest summary line ("State: N known postings") and the `export_fetch_state` task in the last job run. Safe either way: without state, everything is fetched in full. |
+| `Triggering new runs for organization ... is currently disabled temporarily` | Free Edition compute quota used up: compute is off for the rest of the day (in extreme cases the month) | Nothing is lost: the landed file waits in the volume and the next run loads it. Next day, Jobs → `jobpilot-daily` → Run now (don't re-run the GitHub fetch). Check `system.billing.usage` for what used the quota. |
 | Dashboard empty | Pipeline or scoring hasn't run yet | Run `jobpilot-daily` manually. |
 | App stopped | Free Edition stops apps after 24 hours | Compute → Apps → jobpilot → Start. |
 
