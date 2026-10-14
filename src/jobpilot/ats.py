@@ -164,6 +164,26 @@ def _in_country(descriptor: str, country: str) -> bool:
     return re.search(rf"(?<![a-z]){re.escape(country.lower())}(?![a-z])", str(descriptor).lower()) is not None
 
 
+_MULTI_LOCATION = re.compile(r"^\s*\d+\s+locations\s*$", re.I)
+
+
+def list_location_ok(locations_text: str, locations) -> bool:
+    """Pre-filter on the location shown in a Workday LIST row, before paying for the job's detail call.
+
+    Used only when the tenant has no country filter (PwC, Barclays, Fractal...): their "databricks" search
+    then returns jobs worldwide, and fetching every one's details just to drop most of them wastes requests.
+    Filter as early as possible, like predicate pushdown in a query engine.
+      "Bengaluru Millenia" / "IND - Telangana - Hyderabad"  -> keep (a wanted location is in the text)
+      "New York" / "Glasgow Campus"                        -> drop (no detail call)
+      "4 Locations"                                         -> keep: can't tell yet, the detail call decides
+      "" (no location shown)                                -> keep, same reason
+    """
+    text = (locations_text or "").lower()
+    if not locations or not text or _MULTI_LOCATION.match(text):
+        return True
+    return any(l.lower() in text for l in locations)
+
+
 def discover_country_facets(base: str, country: str = "India", get=None) -> dict:
     """Find this tenant's location filter for `country`, so a new Workday company needs no hand-copied IDs.
 
@@ -221,7 +241,7 @@ def fetch_workday(board: dict, title_keywords, locations, pause: float = 0.5, ge
     get = get or _http_json
     known = known or no_state()
     title_keywords = title_keywords_for(board, title_keywords)
-    base, wanted = workday_base(board), []
+    base, wanted, dropped_by_location = workday_base(board), [], 0
     # No facets in the config: find the country filter from the tenant's own facet list (one request).
     facets = board.get("facets")
     if facets is None:
@@ -254,13 +274,19 @@ def fetch_workday(board: dict, title_keywords, locations, pause: float = 0.5, ge
                 title = (p.get("title") or "").lower()
                 if path and path not in seen and (not title_keywords or any(k.lower() in title for k in title_keywords)):
                     seen.add(path)
+                    # No country filter on the server: drop clearly non-India rows here, before the detail call.
+                    if not facets and not list_location_ok(p.get("locationsText"), locations):
+                        dropped_by_location += 1
+                        continue
                     wanted.append(path)
             offset += WORKDAY_PAGE
             if len(wanted) >= max_jobs:
                 break
             time.sleep(pause)
     wanted = wanted[:max_jobs]
-    print(f"  {name}: {len(wanted)} matching titles in {pages} list page(s); fetching details", flush=True)
+    print(f"  {name}: {len(wanted)} matching titles in {pages} list page(s); fetching details"
+          + (f" ({dropped_by_location} outside the wanted locations, skipped from the list)" if dropped_by_location else ""),
+          flush=True)
     records = []
     for i, path in enumerate(wanted, 1):
         rec = known.reuse(path)                      # fetched in full recently? then no detail call
