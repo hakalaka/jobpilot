@@ -85,3 +85,33 @@ def test_max_pages_limits_list_calls():
     fake = FakeWorkday({o: page(o) for o in range(0, 2000, 20)})
     ats.fetch_workday({**BOARD, "max_pages": 3}, ["data engineer"], [], pause=0, get=fake)
     assert sum(1 for c in fake.calls if c[0].endswith("/jobs")) == 3       # not 100
+
+
+def test_list_location_prefilter():
+    india = ["india", "bengaluru", "hyderabad", "pune"]
+    assert ats.list_location_ok("Bengaluru Millenia", india)              # PwC: city only, no country
+    assert ats.list_location_ok("IND - Telangana - Hyderabad (Hitec City)", india)
+    assert not ats.list_location_ok("New York", india)
+    assert not ats.list_location_ok("Glasgow Campus", india)
+    assert ats.list_location_ok("4 Locations", india)                     # ambiguous: the detail call decides
+    assert ats.list_location_ok("", india)
+    assert ats.list_location_ok("New York", [])                           # no location filter configured
+
+
+def test_tenant_without_country_filter_skips_foreign_jobs_before_detail_calls():
+    """No facet found: a New York job is dropped from the list (no detail call); '2 Locations' is still checked."""
+    rows = [{"title": "Data Engineer", "externalPath": "/job/a", "locationsText": "Bengaluru Millenia"},
+            {"title": "Data Engineer", "externalPath": "/job/b", "locationsText": "New York"},
+            {"title": "Data Engineer", "externalPath": "/job/c", "locationsText": "2 Locations"}]
+    fake = FakeWorkday({0: {"total": 3, "jobPostings": rows}})
+    ats.fetch_workday({**BOARD, "facets": {}}, ["data engineer"], ["india", "bengaluru"], pause=0, get=fake)
+    details = [c[0] for c in fake.calls if not c[0].endswith("/jobs")]
+    assert len(details) == 2 and not any(u.endswith("/job/b") for u in details)
+
+
+def test_tenant_with_country_filter_trusts_the_server():
+    """With a facet the server already filtered by country: no client-side location drop."""
+    rows = [{"title": "Data Engineer", "externalPath": "/job/x", "locationsText": "Some Campus"}]
+    fake = FakeWorkday({0: {"total": 1, "jobPostings": rows}})
+    ats.fetch_workday(BOARD, ["data engineer"], ["india"], pause=0, get=fake)
+    assert len([c for c in fake.calls if not c[0].endswith("/jobs")]) == 1
