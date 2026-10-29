@@ -19,6 +19,10 @@ resources:
         - task_key: ingest_pipeline
           depends_on: [{task_key: setup}]
           pipeline_task: {pipeline_id: "${resources.pipelines.jobpilot_ingest.id}"}
+        - task_key: export_fetch_state
+          # Tells tomorrow's fetch which jobs it already has (incremental fetch). Runs beside enrichment.
+          depends_on: [{task_key: ingest_pipeline}]
+          notebook_task: {notebook_path: ../notebooks/15_export_fetch_state.py}
         - task_key: enrich_requirements
           depends_on: [{task_key: ingest_pipeline}]
           max_retries: 1
@@ -36,6 +40,11 @@ resources:
         - task_key: quality_gate
           depends_on: [{task_key: semantic_layer}]
           notebook_task: {notebook_path: ../notebooks/50_quality_checks.py}
+        - task_key: export_public_snapshot
+          # Writes raw/public/data.json for the GitHub Pages site. After the quality gate, so a failed
+          # day is never published; inside the job, so no SQL warehouse is woken up for it.
+          depends_on: [{task_key: quality_gate}]
+          notebook_task: {notebook_path: ../notebooks/60_export_public_snapshot.py}
 
     # Runs right after every deploy (from CI), so tables and views always match the code that was just
     # deployed. Without it, a deploy could ship a dashboard before the columns or views it reads exist
@@ -43,8 +52,9 @@ resources:
     jobpilot_post_deploy:
       name: jobpilot-post-deploy
       description: >
-        After each deploy: add any new columns (setup), recompute scores and resume advice (score_jobs),
-        rebuild views and metric views (semantic_layer). Started by the ci workflow.
+        After each deploy: add any new columns (setup), refresh the pipeline so silver and gold get any new
+        columns (no new files = nothing re-read, only the views recompute), recompute scores and resume
+        advice (score_jobs), rebuild views and metric views (semantic_layer). Started by the ci workflow.
       max_concurrent_runs: 1
       timeout_seconds: 1800
       email_notifications:
@@ -56,8 +66,14 @@ resources:
       tasks:
         - task_key: setup
           notebook_task: {notebook_path: ../notebooks/00_setup.py}
-        - task_key: score_jobs
+        - task_key: ingest_pipeline
+          # Every layer the semantic layer reads must be rebuilt from the new code first. Without this,
+          # a deploy that adds a silver column (posted_date, 8 Oct) fails here: the view asks for a
+          # column the old silver doesn't have yet.
           depends_on: [{task_key: setup}]
+          pipeline_task: {pipeline_id: "${resources.pipelines.jobpilot_ingest.id}"}
+        - task_key: score_jobs
+          depends_on: [{task_key: ingest_pipeline}]
           notebook_task: {notebook_path: ../notebooks/20_score_jobs.py}
         - task_key: semantic_layer
           depends_on: [{task_key: score_jobs}]

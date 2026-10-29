@@ -21,6 +21,19 @@ locations:
 - gurgaon
 - chennai
 - noida
+- delhi
+- kolkata
+- ahmedabad
+- kochi
+- coimbatore
+- jaipur
+- trivandrum
+- thiruvananthapuram
+- mysuru
+- vadodara
+- indore
+- chandigarh
+- mohali
 # Workday and other-platform boards are configured by hand (see docs/CONNECTORS.md);
 # Greenhouse and Lever boards are verified and written by tools/discover_boards.py.
 boards:
@@ -52,6 +65,47 @@ boards:
 - {source: workday, company: Morgan Stanley, host: ms.wd5.myworkdayjobs.com, tenant: ms, site: External, search_texts: [databricks], trust_search: true, max_pages: 5, max_jobs: 60}
 - {source: workday, company: Deutsche Bank, host: db.wd3.myworkdayjobs.com, tenant: db, site: DBWebSite, search_texts: [databricks], trust_search: true, max_pages: 5, max_jobs: 60}
 # ---- Other platforms (src/jobpilot/connectors/) --------------------------------------------------
+# ---- Added 14 Oct 2026 (all four target groups). Platform found by tools/detect (careers-page fingerprints),
+# ---- then verified from a GitHub runner. A board with 0 India Databricks jobs today is kept on purpose: it costs
+# ---- two requests a day and starts reporting the day such a job opens. PwC, Genpact, Fractal, Quantiphi, Barclays,
+# ---- GE HealthCare and MSD have no country filter on Workday: their non-India jobs are dropped from the list
+# ---- (ats.list_location_ok) before any detail call.
+# Consulting & IT services
+- {source: workday, company: PwC, host: pwc.wd3.myworkdayjobs.com, tenant: pwc, site: Global_Experienced_Careers, search_texts: [databricks], trust_search: true, max_pages: 5, max_jobs: 60}
+- {source: workday, company: Genpact, host: genpact.wd108.myworkdayjobs.com, tenant: genpact, site: External_Careers, search_texts: [databricks], trust_search: true, max_pages: 5, max_jobs: 60}
+- {source: workday, company: Fractal, host: fractal.wd1.myworkdayjobs.com, tenant: fractal, site: Careers, search_texts: [databricks], trust_search: true, max_pages: 5, max_jobs: 60}
+- {source: workday, company: Quantiphi, host: quantiphi.wd1.myworkdayjobs.com, tenant: quantiphi, site: Careers_at_Quantiphi, search_texts: [databricks], trust_search: true, max_pages: 5, max_jobs: 60}
+- {source: workday, company: Gartner, host: gartner.wd5.myworkdayjobs.com, tenant: gartner, site: EXT, search_texts: [databricks], trust_search: true, max_pages: 5, max_jobs: 60}
+# Big tech & product
+- {source: workday, company: Adobe, host: adobe.wd5.myworkdayjobs.com, tenant: adobe, site: external_experienced, search_texts: [databricks], trust_search: true, max_pages: 5, max_jobs: 60}
+- {source: workday, company: HP, host: hp.wd5.myworkdayjobs.com, tenant: hp, site: ExternalCareerSite, search_texts: [databricks], trust_search: true, max_pages: 5, max_jobs: 60}
+- {source: workday, company: Intel, host: intel.wd1.myworkdayjobs.com, tenant: intel, site: External, search_texts: [databricks], trust_search: true, max_pages: 5, max_jobs: 60}
+- {source: workday, company: Visa, host: visa.wd5.myworkdayjobs.com, tenant: visa, site: Visa, search_texts: [databricks], trust_search: true, max_pages: 5, max_jobs: 60}
+- {source: workday, company: PayPal, host: paypal.wd1.myworkdayjobs.com, tenant: paypal, site: jobs, search_texts: [databricks], trust_search: true, max_pages: 5, max_jobs: 60}
+- {source: workday, company: Target, host: target.wd5.myworkdayjobs.com, tenant: target, site: targetcareers, search_texts: [databricks], trust_search: true, max_pages: 5, max_jobs: 60}
+- {source: workday, company: Workday, host: workday.wd5.myworkdayjobs.com, tenant: workday, site: Workday, search_texts: [databricks], trust_search: true, max_pages: 5, max_jobs: 60}
+# Healthcare & pharma
+- {source: workday, company: Johnson & Johnson, host: jj.wd5.myworkdayjobs.com, tenant: jj, site: JJ, search_texts: [databricks], trust_search: true, max_pages: 5, max_jobs: 60}
+- {source: workday, company: IQVIA, host: iqvia.wd1.myworkdayjobs.com, tenant: iqvia, site: IQVIA, search_texts: [databricks], trust_search: true, max_pages: 5, max_jobs: 60}
+- {source: workday, company: Medtronic, host: medtronic.wd1.myworkdayjobs.com, tenant: medtronic, site: MedtronicCareers, search_texts: [databricks], trust_search: true, max_pages: 5, max_jobs: 60}
+- {source: workday, company: McKesson, host: mckesson.wd3.myworkdayjobs.com, tenant: mckesson, site: External_Careers, search_texts: [databricks], trust_search: true, max_pages: 5, max_jobs: 60}
+- {source: workday, company: Cardinal Health, host: cardinalhealth.wd1.myworkdayjobs.com, tenant: cardinalhealth, site: EXT, search_texts: [databricks], trust_search: true, max_pages: 5, max_jobs: 60}
+- {source: workday, company: Abbott, host: abbott.wd5.myworkdayjobs.com, tenant: abbott, site: abbottcareers, search_texts: [databricks], trust_search: true, max_pages: 5, max_jobs: 60}
+- {source: workday, company: Philips, host: philips.wd3.myworkdayjobs.com, tenant: philips, site: jobs-and-careers, search_texts: [databricks], trust_search: true, max_pages: 5, max_jobs: 60}
+- {source: workday, company: GE HealthCare, host: gehc.wd5.myworkdayjobs.com, tenant: gehc, site: GEHC_ExternalSite, search_texts: [databricks], trust_search: true, max_pages: 5, max_jobs: 60}
+- {source: workday, company: Merck (MSD), host: msd.wd5.myworkdayjobs.com, tenant: msd, site: SearchJobs, search_texts: [databricks], trust_search: true, max_pages: 5, max_jobs: 60}
+- {source: workday, company: Pfizer, host: pfizer.wd1.myworkdayjobs.com, tenant: pfizer, site: PfizerCareers, search_texts: [databricks], trust_search: true, max_pages: 5, max_jobs: 60}
+- {source: workday, company: Sanofi, host: sanofi.wd3.myworkdayjobs.com, tenant: sanofi, site: SanofiCareers, search_texts: [databricks], trust_search: true, max_pages: 5, max_jobs: 60}
+- {source: workday, company: Roche, host: roche.wd3.myworkdayjobs.com, tenant: roche, site: roche-ext, search_texts: [databricks], trust_search: true, max_pages: 5, max_jobs: 60}
+# Banks, fintech & financial data
+- {source: workday, company: S&P Global, host: spgi.wd5.myworkdayjobs.com, tenant: spgi, site: SPGI_Careers, search_texts: [databricks], trust_search: true, max_pages: 5, max_jobs: 60}
+- {source: workday, company: Northern Trust, host: ntrs.wd1.myworkdayjobs.com, tenant: ntrs, site: northerntrust, search_texts: [databricks], trust_search: true, max_pages: 5, max_jobs: 60}
+- {source: workday, company: Barclays, host: barclays.wd3.myworkdayjobs.com, tenant: barclays, site: External_Career_Site_Barclays, search_texts: [databricks], trust_search: true, max_pages: 5, max_jobs: 60}
+- {source: workday, company: Equifax, host: equifax.wd5.myworkdayjobs.com, tenant: equifax, site: External, search_texts: [databricks], trust_search: true, max_pages: 5, max_jobs: 60}
+- {source: workday, company: TransUnion, host: transunion.wd5.myworkdayjobs.com, tenant: transunion, site: TransUnion, search_texts: [databricks], trust_search: true, max_pages: 5, max_jobs: 60}
+- {source: workday, company: Fiserv, host: fiserv.wd5.myworkdayjobs.com, tenant: fiserv, site: EXT, search_texts: [databricks], trust_search: true, max_pages: 5, max_jobs: 60}
+# Oracle Recruiting Cloud (EXL): India location ID is found automatically, like JPMC's.
+- {source: oracle, company: EXL, host: fa-ewjt-saasfaprod1.fa.ocs.oraclecloud.com, site: CX_2, search_texts: [databricks], trust_search: true, max_pages: 5, max_jobs: 60}
 - {source: amazon, company: Amazon, search_texts: [data engineer], country_code: IND, max_pages: 3}
 - {source: oracle, company: JPMorgan Chase, host: jpmc.fa.oraclecloud.com, site: CX_1001, search_texts: [databricks], trust_search: true, max_pages: 4, max_jobs: 60}
 - {source: successfactors, company: EY, host: careers.ey.com, path: /ey, search_texts: [databricks], trust_search: true, max_pages: 3, max_jobs: 60}

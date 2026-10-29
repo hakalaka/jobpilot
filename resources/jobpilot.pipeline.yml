@@ -12,4 +12,5 @@ resources:
         - file:
             path: ../pipelines/ingest.sql
       configuration:
-        landing_path: /Volumes/${var.catalog}/${var.schema}/raw/inbox
+        landing_path: /Volumes/${var.catalog}/${var.schema}/raw/inbox     # postings (one file per day)
+        runs_path: /Volumes/${var.catalog}/${var.schema}/raw/runs         # per-board fetch audit log

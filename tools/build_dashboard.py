@@ -66,9 +66,11 @@ DATASETS = [
                CASE recommendation WHEN 'APPLY' THEN 'Apply' ELSE 'Worth a try' END AS fit_band,
                array_join(slice(matched_skills, 1, 6), ', ') AS highlight_skills,
                array_join(slice(missing_skills, 1, 4), ', ') AS missing_skills,
-               years_required, first_seen, days_open, url
+               years_required, posted_date, days_since_posted, url
         FROM {T}.v_job_market
-        WHERE is_open AND recommendation IN ('APPLY', 'STRETCH')
+        -- Fresh only: posted in the last 30 days (by the employer's date; first-seen date if the site gives none).
+        -- Older jobs are still counted on the page, just not suggested: they're often filled or evergreen.
+        WHERE is_open AND recommendation IN ('APPLY', 'STRETCH') AND days_since_posted <= 30
         ORDER BY recommendation, fit_score DESC, first_seen DESC"""),
     ("ds_resume", "What to change on my resume", f"""
         -- From the scoring task (src/jobpilot/advice.py): open-market demand turned into resume actions.
@@ -84,6 +86,15 @@ DATASETS = [
         FROM {T}.gold_skill_demand d JOIN {T}.v_job_market m USING (job_key)
         WHERE NOT d.known_skill AND m.is_open
         GROUP BY d.skill ORDER BY postings DESC LIMIT 30"""),
+    ("ds_fetch_latest", "Latest fetch run, per board", f"""
+        -- From the fetch audit log (bronze_fetch_runs): what the incremental fetch did on the latest day.
+        SELECT company, source, postings, fetched_full, reused, seconds, error
+        FROM {T}.bronze_fetch_runs
+        WHERE snapshot_day = (SELECT MAX(snapshot_day) FROM {T}.bronze_fetch_runs)"""),
+    ("ds_fetch_days", "Fetch runs per day", f"""
+        SELECT snapshot_day, SUM(postings) AS postings, SUM(fetched_full) AS fetched_full, SUM(reused) AS reused,
+               SUM(seconds) AS seconds
+        FROM {T}.bronze_fetch_runs GROUP BY snapshot_day"""),
     ("ds_loads", "Bronze rows loaded per day", f"""
         SELECT snapshot_day, source, COUNT(*) AS rows_loaded, COUNT(DISTINCT job_key) AS postings
         FROM {T}.bronze_job_snapshots GROUP BY snapshot_day, source"""),
@@ -179,6 +190,7 @@ def multi_filter(title, field, datasets, x, y):
 OPEN = ["`is_open`"]
 STATED_DOMAIN = ["`domain` <> 'Not stated'"]          # unknown industry says nothing: keep it off domain charts
 STATED_SENIORITY = ["`seniority` <> 'Not stated'"]
+FRESH = ["`posting_age` <> 'Older (over 30 days)'"]   # what the apply list shows: posted in the last 30 days
 SCORED = ["`is_enriched`"]   # fit figures only make sense for postings the LLM has read
 pct = {"type": "number-percent", "decimalPlaces": {"type": "max", "places": 0}}
 ALL_MARKET = ["mv_market", "ds_market", "ds_skills", "ds_gaps", "ds_skill_flags"]   # datasets the filters apply to
@@ -224,19 +236,23 @@ where_page = [
     text(["# Where to apply, and what to change on my resume"], 0, 0, 6, 1),
     text(["Open roles scored against my profile every morning. **Apply** = fit 70+ with years and location OK; "
           "**Worth a try** = fit 50-69 or a near miss. *Highlight* = skills the posting asks for that I have: lead with "
-          "these in the tailored resume. The resume table turns what open postings require into changes to make."],
+          "these in the tailored resume. The resume table turns what open postings require into changes to make. "
+          "Only roles posted in the last 30 days are suggested; older ones are counted but hidden."],
          0, 1, 6, 1),
     multi_filter("City", "city", ["mv_market", "ds_apply"], 0, 2),
-    counter("Strong-fit roles open", "mv_market", "strong_fit_postings", measure("strong_fit_postings"), 0, 3, filters=OPEN),
-    counter("Worth-a-try roles open", "mv_market", "stretch_postings", measure("stretch_postings"), 1, 3, filters=OPEN),
+    counter("Strong-fit roles (posted in 30 days)", "mv_market", "strong_fit_postings", measure("strong_fit_postings"),
+            0, 3, filters=OPEN + FRESH),
+    counter("Worth-a-try roles (posted in 30 days)", "mv_market", "stretch_postings", measure("stretch_postings"),
+            1, 3, filters=OPEN + FRESH),
     counter("Companies with a strong fit", "mv_market", "companies_with_strong_fit",
-            measure("companies_with_strong_fit"), 2, 3, filters=OPEN),
+            measure("companies_with_strong_fit"), 2, 3, filters=OPEN + FRESH),
     counter("New in the last 7 days", "mv_market", "new_this_week", measure("new_this_week"), 3, 3, filters=OPEN),
-    counter("Best fit score", "mv_market", "best_fit_score", measure("best_fit_score"), 4, 3, filters=OPEN),
+    counter("Older open roles, hidden (30+ days)", "mv_market", "older_open_postings", measure("older_open_postings"),
+            4, 3, filters=OPEN),
     counter("Postings analysed by the LLM", "mv_market", "enrichment_coverage", measure("enrichment_coverage"),
             5, 3, fmt=pct, filters=OPEN),
-    bar("Companies with the most strong-fit openings", "mv_market", "company", "`company`", "strong",
-        measure("strong_fit_postings"), 0, 5, 3, 7, filters=OPEN + ["`recommendation` = 'APPLY'"],
+    bar("Companies with the most strong-fit openings (posted in 30 days)", "mv_market", "company", "`company`", "strong",
+        measure("strong_fit_postings"), 0, 5, 3, 7, filters=OPEN + FRESH + ["`recommendation` = 'APPLY'"],
         cat_label="Company", val_label="Strong-fit openings"),
     table("What to change on my resume", "ds_resume",
           [("action", "Action"), ("skill", "Skill"), ("must_postings", "Open postings requiring it"),
@@ -244,7 +260,8 @@ where_page = [
     table("Apply list: open roles, best fit first", "ds_apply",
           [("company", "Company"), ("title", "Role"), ("city", "City"), ("fit_score", "Fit"), ("fit_band", "Band"),
            ("highlight_skills", "Highlight on resume"), ("missing_skills", "Missing"),
-           ("years_required", "Years asked"), ("days_open", "Days on board"), ("url", "Link")], 0, 12, 6, 9),
+           ("years_required", "Years asked"), ("posted_date", "Posted"), ("days_since_posted", "Days old"),
+           ("url", "Link")], 0, 12, 6, 9),
 ]
 
 fit_page = [
@@ -266,13 +283,22 @@ fit_page = [
 
 health_page = [
     text(["# Pipeline health"], 0, 0, 6, 1),
-    text(["Quality gate results from the last run (blocking checks fail the job and alert by email), "
-          "and rows landed in bronze per day."], 0, 1, 6, 1),
+    text(["**Incremental fetch:** every open job is listed daily (that's how closures are detected), but a job already "
+          "fetched in full in the last 7 days is not downloaded again: it lands as a *seen* row. Below: what the latest "
+          "fetch skipped, per board. Then the quality gate and rows loaded."], 0, 1, 6, 1),
+    counter("Postings in the latest fetch", "ds_fetch_latest", "postings", "SUM(`postings`)", 0, 2, w=2),
+    counter("Fetched in full (new or due a refresh)", "ds_fetch_latest", "full", "SUM(`fetched_full`)", 2, 2, w=2),
+    counter("Already known: detail call skipped", "ds_fetch_latest", "reused", "SUM(`reused`)", 4, 2, w=2),
+    table("Latest fetch, per board", "ds_fetch_latest",
+          [("company", "Board"), ("source", "Platform"), ("postings", "Postings"), ("fetched_full", "Fetched in full"),
+           ("reused", "Already known"), ("seconds", "Seconds"), ("error", "Error")], 0, 4, 4, 7),
+    line("Detail calls skipped per day", "ds_fetch_days", "snapshot_day", "`snapshot_day`", "reused", "SUM(`reused`)",
+         4, 4, 2, 7, "Already known"),
     table("Quality checks, latest run", "ds_quality",
           [("check_name", "Check"), ("passed", "Passed"), ("blocking", "Blocking"), ("value", "Value"),
-           ("threshold", "Limit"), ("detail", "Detail"), ("checked_at", "Checked at")], 0, 2, 6, 5),
+           ("threshold", "Limit"), ("detail", "Detail"), ("checked_at", "Checked at")], 0, 24, 6, 5),
     line("Postings landed per day", "ds_loads", "snapshot_day", "`snapshot_day`", "postings", "SUM(`postings`)",
-         0, 7, 6, 4, "Postings"),
+         0, 29, 6, 4, "Postings"),
     bar("Open postings by source platform (one connector per platform)", "mv_market", "platform", "`source_platform`",
         "postings", measure("open_postings"), 0, 18, 3, 5, filters=OPEN, cat_label="Platform", val_label="Open postings"),
     bar("Hiring companies by source platform", "mv_market", "platform", "`source_platform`",

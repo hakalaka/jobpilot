@@ -20,6 +20,23 @@ throwaway `probe/*` branch that committed real responses back. Those responses, 
 fixtures in `tests/fixtures/`, so every parser is tested against what the site really returns.
 A second live run on the runner caught two bugs the unit tests couldn't (see Oracle and boilerplate below).
 
+**Incremental fetch** (`src/jobpilot/incremental.py`)
+- Every open job is still **listed** daily: a job missing from today's list is how we know it closed.
+- But on Workday, Oracle, Eightfold and SuccessFactors each job's description costs a detail call. A job
+  fetched in full in the last 7 days is not fetched again: it lands as a **`seen`** row (`fetch_mode = 'seen'`,
+  no description). Silver takes each job's text from its latest **full** row, so nothing is lost.
+- The memory comes from Databricks: task `export_fetch_state` derives `raw/state/known_postings.json` from
+  bronze after each run; `daily-ingest` downloads it before fetching. Bronze is the system of record and the
+  state is only a cache: delete the file and the next run simply fetches everything in full and rebuilds it.
+- Jobs are matched on `list_ref`, the ID visible in the *list* response (Workday `externalPath`, Oracle
+  requisition Id, Eightfold position id, SuccessFactors job path), because that's all we have before a detail call.
+- A known job is re-fetched in full every 7 days (`refresh_days`) to catch edited descriptions; the enrichment
+  fingerprint then re-extracts it because its text hash changed.
+- Measured live on 4 real boards (Cigna, Mastercard, JPMorgan, EY): 116 detail calls and 185 s on the first run,
+  1 call and 13 s on the second, with identical postings and job keys.
+- Every fetch writes an audit row per board (`raw/runs/` -> `bronze_fetch_runs`): postings, fetched in full,
+  already known, seconds, error. The dashboard's Pipeline health page shows it.
+
 **Shared rules**
 - **Filter on the server first** (country facet + a specific search such as "databricks"), then by title,
   then fetch details: detail calls are the expensive part (N+1).
@@ -62,15 +79,51 @@ What shaped the connector:
   list (one request) and picks the exact country, else every city in it ("India" as a whole word, so
   "Indiana" never matches). India's ID is the same Workday-wide (`c4f78be1...`), but the parameter name isn't.
 
-### Adding a Workday company
+### Adding a company (any supported platform)
 
-1. Open its careers site; the URL is `https://{host}/{locale}/{site}`, e.g.
-   `https://accenture.wd103.myworkdayjobs.com/en-US/AccentureCareers` → host `accenture.wd103.myworkdayjobs.com`,
-   site `AccentureCareers`. The tenant is the first part of the host (`accenture`).
-2. Add one line to `config/sources.yaml`: `{source: workday, company: X, host: ..., tenant: ..., site: ...,
-   search_texts: [databricks], trust_search: true}`. No facet IDs: the India filter is found automatically.
-3. Run `python tools/fetch_jobs.py` (or the daily-ingest workflow) and check the log line
-   `X: location filter {...}` and the result count.
+```
+python tools/add_board.py https://careers.spglobal.com/jobs
+```
+
+It fetches the careers page, finds the platform from its fingerprints (`src/jobpilot/detect.py`: a
+`myworkdayjobs.com` link, an `oraclecloud.com/hcmUI` path, an embedded Greenhouse board...), runs the real connector
+on a 5-job sample, and prints the line to paste into `config/sources.yaml`. Run it where there's open internet (your
+laptop, or a GitHub runner).
+
+By hand, for Workday: the URL is `https://{host}/{locale}/{site}`, e.g.
+`https://accenture.wd103.myworkdayjobs.com/en-US/AccentureCareers` → host `accenture.wd103.myworkdayjobs.com`,
+site `AccentureCareers`, tenant `accenture`. No facet IDs: the India filter is found automatically.
+
+### Tenants without a country filter
+
+Some tenants (PwC, Genpact, Fractal, Quantiphi, Barclays, GE HealthCare, MSD) only offer city names like
+"Bengaluru Millenia" in their location facet, so there's no India ID to send to the server and a "databricks"
+search returns jobs worldwide. The connector then drops rows whose list-level location clearly isn't in India
+(`ats.list_location_ok`) **before** the detail call, like predicate pushdown. "4 Locations" rows are kept: only the
+detail call can say where they are. Example: PwC's 103 worldwide results became 34 detail calls and 18 India postings.
+
+### Coverage by sector (verified 14 Oct 2026)
+
+| Sector | Companies |
+|---|---|
+| Consulting & IT services | Accenture, EY, PwC, Genpact, EXL, Fractal, Capco, Sigmoid, Quantiphi, Gartner |
+| Big tech & product | Amazon, NVIDIA, Salesforce, Adobe, HP, Intel, Visa, PayPal, Target, Workday, Databricks, Netflix + Greenhouse/Lever product companies |
+| Healthcare & pharma | Cigna, Novartis, AstraZeneca, Thermo Fisher, J&J, IQVIA, Medtronic, McKesson, Cardinal Health, Abbott, Philips, GE HealthCare, MSD, Pfizer, Sanofi, Roche |
+| Banks, fintech & financial data | JPMorgan Chase, Citi, Wells Fargo, Morgan Stanley, Deutsche Bank, State Street, Fidelity, Mastercard, S&P Global, Northern Trust, Barclays, Equifax, TransUnion, Fiserv |
+
+### Not covered, and why
+
+| Company | Platform | Why not |
+|---|---|---|
+| Google, Microsoft, Meta, Apple, Uber, Goldman Sachs, Flipkart | custom sites | no public job API; scraping their apps is brittle and against their terms |
+| Cisco, Humana, CVS, Roche*, FIS, Fiserv*, GE HealthCare* | Phenom (front end) | *covered through the Workday behind it; the rest have no public API |
+| ZS | iCIMS | no public API without a customer key |
+| Optum/UnitedHealth, Société Générale | Taleo | legacy, session-bound pages |
+| PayPal, Qualcomm, Microsoft, AmEx | Eightfold | API returns 403/404 to non-browser clients (PayPal is still covered via its Workday) |
+| Wipro, Standard Chartered, Moody's | SuccessFactors | their search pages return 0 results to our connector; needs a closer look |
+| Experian, ServiceNow | SmartRecruiters | public API works, but 0 India Databricks jobs today: connector not worth it yet |
+| Humana, CVS, Bank of America, Carelon | Workday | their Databricks jobs are US-only |
+| Dell, Walmart, Cognizant, BNY, Nielsen, Lilly, Chubb, Swiss Re | Workday | site name not found yet (HTTP 422): find it with `add_board.py` from their careers page |
 
 ## Oracle Recruiting Cloud (JPMorgan Chase)
 

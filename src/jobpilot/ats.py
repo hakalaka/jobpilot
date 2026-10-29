@@ -13,6 +13,8 @@ import time
 import urllib.request
 from datetime import datetime, timezone
 
+from .incremental import no_state
+
 GREENHOUSE_URL = "https://boards-api.greenhouse.io/v1/boards/{token}/jobs?content=true"
 LEVER_URL = "https://api.lever.co/v0/postings/{token}?mode=json"
 
@@ -34,6 +36,9 @@ def html_to_text(s: str) -> str:
 
 
 def _record(source, company, source_id, title, location, url, text, posted_at=None):
+    """The one record shape every connector returns. list_ref = the job's ID as seen in the board's LIST
+    response (what the incremental fetch remembers); fetch_mode = 'full' (description fetched) or
+    'seen' (still open, description skipped because we already have it: see incremental.py)."""
     return {
         "job_key": job_key(source, company, str(source_id)),
         "source": source,
@@ -45,6 +50,8 @@ def _record(source, company, source_id, title, location, url, text, posted_at=No
         "raw_text": text or "",
         "posted_at": posted_at,
         "ingested_at": datetime.now(timezone.utc).isoformat(),
+        "list_ref": str(source_id),
+        "fetch_mode": "full",
     }
 
 
@@ -157,6 +164,26 @@ def _in_country(descriptor: str, country: str) -> bool:
     return re.search(rf"(?<![a-z]){re.escape(country.lower())}(?![a-z])", str(descriptor).lower()) is not None
 
 
+_MULTI_LOCATION = re.compile(r"^\s*\d+\s+locations\s*$", re.I)
+
+
+def list_location_ok(locations_text: str, locations) -> bool:
+    """Pre-filter on the location shown in a Workday LIST row, before paying for the job's detail call.
+
+    Used only when the tenant has no country filter (PwC, Barclays, Fractal...): their "databricks" search
+    then returns jobs worldwide, and fetching every one's details just to drop most of them wastes requests.
+    Filter as early as possible, like predicate pushdown in a query engine.
+      "Bengaluru Millenia" / "IND - Telangana - Hyderabad"  -> keep (a wanted location is in the text)
+      "New York" / "Glasgow Campus"                        -> drop (no detail call)
+      "4 Locations"                                         -> keep: can't tell yet, the detail call decides
+      "" (no location shown)                                -> keep, same reason
+    """
+    text = (locations_text or "").lower()
+    if not locations or not text or _MULTI_LOCATION.match(text):
+        return True
+    return any(l.lower() in text for l in locations)
+
+
 def discover_country_facets(base: str, country: str = "India", get=None) -> dict:
     """Find this tenant's location filter for `country`, so a new Workday company needs no hand-copied IDs.
 
@@ -208,11 +235,13 @@ def parse_workday_detail(payload: dict, board: dict) -> dict:
                    info.get("startDate"))
 
 
-def fetch_workday(board: dict, title_keywords, locations, pause: float = 0.5, get=None) -> list:
-    """List pages (server-side filtered), keep matching titles, then fetch details for those only."""
+def fetch_workday(board: dict, title_keywords, locations, pause: float = 0.5, get=None, known=None) -> list:
+    """List pages (server-side filtered), keep matching titles, then fetch details only for jobs we
+    don't already know (known = incremental.BoardState; None = fetch everything in full)."""
     get = get or _http_json
+    known = known or no_state()
     title_keywords = title_keywords_for(board, title_keywords)
-    base, wanted = workday_base(board), []
+    base, wanted, dropped_by_location = workday_base(board), [], 0
     # No facets in the config: find the country filter from the tenant's own facet list (one request).
     facets = board.get("facets")
     if facets is None:
@@ -245,32 +274,45 @@ def fetch_workday(board: dict, title_keywords, locations, pause: float = 0.5, ge
                 title = (p.get("title") or "").lower()
                 if path and path not in seen and (not title_keywords or any(k.lower() in title for k in title_keywords)):
                     seen.add(path)
+                    # No country filter on the server: drop clearly non-India rows here, before the detail call.
+                    if not facets and not list_location_ok(p.get("locationsText"), locations):
+                        dropped_by_location += 1
+                        continue
                     wanted.append(path)
             offset += WORKDAY_PAGE
             if len(wanted) >= max_jobs:
                 break
             time.sleep(pause)
     wanted = wanted[:max_jobs]
-    print(f"  {name}: {len(wanted)} matching titles in {pages} list page(s); fetching details", flush=True)
+    print(f"  {name}: {len(wanted)} matching titles in {pages} list page(s); fetching details"
+          + (f" ({dropped_by_location} outside the wanted locations, skipped from the list)" if dropped_by_location else ""),
+          flush=True)
     records = []
     for i, path in enumerate(wanted, 1):
-        rec = parse_workday_detail(get(f"{base}{path}", None), board)
+        rec = known.reuse(path)                      # fetched in full recently? then no detail call
+        if rec is None:
+            rec = known.full(parse_workday_detail(get(f"{base}{path}", None), board), path)
+            time.sleep(pause)
         if matches_filters(rec, title_keywords, locations):
             records.append(rec)
         if i % 25 == 0:
-            print(f"  {name}: {i}/{len(wanted)} details", flush=True)
-        time.sleep(pause)
+            print(f"  {name}: {i}/{len(wanted)} checked", flush=True)
+    print(f"  {name}: {known.fetched} fetched in full, {known.reused} already known (detail call skipped)", flush=True)
     return records
 
 
 # ------------------------------------------------------------- dispatch -----
-def fetch_and_parse(board: dict, title_keywords, locations) -> list:
-    """One entry point for every source: config/sources.yaml says which connector reads each board."""
+def fetch_and_parse(board: dict, title_keywords, locations, known=None) -> list:
+    """One entry point for every source: config/sources.yaml says which connector reads each board.
+    known: incremental.BoardState for this board. Only connectors that pay a detail call per job use it;
+    Greenhouse, Lever and Amazon return descriptions in the list, so there's nothing to skip."""
     from .connectors import amazon, eightfold, oracle, successfactors   # imported here: they import this module
     connectors = {"workday": fetch_workday, "amazon": amazon.fetch, "eightfold": eightfold.fetch,
                   "oracle": oracle.fetch, "successfactors": successfactors.fetch}
     if board["source"] in connectors:
-        return connectors[board["source"]](board, title_keywords, locations)
+        if board["source"] == "amazon":
+            return connectors["amazon"](board, title_keywords, locations)
+        return connectors[board["source"]](board, title_keywords, locations, known=known)
     payload = fetch(board["source"], board["token"])
     parser = parse_greenhouse if board["source"] == "greenhouse" else parse_lever
     return [r for r in parser(payload, board["company"]) if matches_filters(r, title_keywords, locations)]

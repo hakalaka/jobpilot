@@ -40,17 +40,23 @@ def test_dashboard_json_is_up_to_date_and_consistent():
                 assert r in fields, f"{w['name']}: encoding uses {r} but query has {sorted(fields)}"
 
 
+def _public_queries():
+    """The public snapshot's queries (src/jobpilot/public_snapshot.py), as the daily job runs them."""
+    import sys
+    sys.path.insert(0, str(ROOT / "src"))
+    from jobpilot.public_snapshot import queries
+    return queries("workspace.jobpilot")
+
+
 def test_public_export_never_reads_private_data():
-    exp = _load(ROOT / "tools" / "export_snapshot.py")
-    sql = " ".join(exp.QUERIES.values()).lower()
+    sql = " ".join(_public_queries().values()).lower()
     for private in ("applications", "v_my_applications", "job_leads", "/private", "master_profile"):
         assert private not in sql, f"public snapshot must not touch {private}"
 
 
 def test_snapshot_page_handles_sample_data():
     data = json.loads((ROOT / "tests" / "fixtures" / "site_data.json").read_text())
-    exp = _load(ROOT / "tools" / "export_snapshot.py")
-    assert set(exp.QUERIES) <= set(data), "sample data must cover every exported query"
+    assert set(_public_queries()) <= set(data), "sample data must cover every exported query"
 
 
 def _metric_views():
@@ -90,3 +96,72 @@ def test_dashboard_only_uses_measures_and_dimensions_that_exist():
                         assert col in dims, f"{item['widget']['name']}: no dimension {col!r} in {mv_datasets[ds]}"
                         checked += 1
     assert checked > 10
+
+
+SQL_WORDS = {"select", "from", "where", "and", "or", "not", "as", "group", "by", "order", "desc", "asc", "limit",
+             "measure", "is", "null", "in", "case", "when", "then", "else", "end", "coalesce", "nullif", "date_sub",
+             "current_date", "cross", "join", "on", "max", "min", "count", "distinct", "true", "false", "having", "k", "x"}
+
+
+def test_public_export_only_uses_metric_view_dimensions():
+    # Broke the public page on 6-7 Oct: a query on mv_job_market filtered on `source`, a raw column the
+    # metric view doesn't expose (its dimension is source_platform). Querying a metric view, you can only
+    # name its dimensions and MEASURE() its measures; this checks every such query in the export.
+    import re
+    views = _metric_views()
+    checked = 0
+    for name, sql in _public_queries().items():
+        for view in re.findall(r"\.(mv_\w+)", sql):
+            # the part of the query that reads this metric view: from its SELECT to the end of its block
+            block = sql[: sql.index(view)].rsplit("SELECT", 1)[-1] + sql[sql.index(view):].split(")", 1)[0]
+            block = re.sub(r"--[^\n]*", " ", block)                     # comments
+            block = re.sub(r"'[^']*'", " ", block)                      # string literals
+            block = re.sub(r"MEASURE\((\w+)\)", " ", block)             # measures are checked below
+            dims, measures = views[view]
+            for m in re.findall(r"MEASURE\((\w+)\)", sql):
+                assert m in measures, f"{name}: no measure {m!r} in {view}"
+            aliases = set(re.findall(r"\bAS\s+(\w+)", block, re.I))
+            for word in re.findall(r"\b[a-z_][a-z0-9_]*\b", block.split(view, 1)[1] if view in block else block):
+                if word.lower() in SQL_WORDS or word in aliases or word.isdigit():
+                    continue
+                assert word in dims, f"{name}: {word!r} is not a dimension of {view} (dimensions: {sorted(dims)})"
+                checked += 1
+    assert checked >= 5
+
+
+def test_post_deploy_job_rebuilds_every_layer_the_semantic_layer_reads():
+    # 8 Oct: the post-deploy job skipped the pipeline, so a new silver column (posted_date) didn't exist
+    # yet when semantic_layer ran. Rule: it must run the same layers, in the same order, as the daily job,
+    # minus fetching and LLM steps.
+    import yaml
+    jobs = yaml.safe_load((ROOT / "resources" / "jobpilot.job.yml").read_text())["resources"]["jobs"]
+
+    def order(job):
+        tasks = {t["task_key"]: [d["task_key"] for d in t.get("depends_on", [])] for t in job["tasks"]}
+        done, out = set(), []
+        while len(out) < len(tasks):
+            for k, deps in tasks.items():
+                if k not in done and all(d in done for d in deps):
+                    done.add(k)
+                    out.append(k)
+        return out
+
+    post = order(jobs["jobpilot_post_deploy"])
+    assert post == ["setup", "ingest_pipeline", "score_jobs", "semantic_layer"]
+    daily = [t for t in order(jobs["jobpilot_daily"]) if t in post]
+    assert daily == post                                   # same layers, same order as the daily run
+
+
+def test_no_automated_step_uses_the_sql_warehouse():
+    # 14 Oct: the SQL warehouse was 47% of compute, mostly woken by automation (two SQL alerts and the
+    # public-page export). Rule: scheduled workflows and bundle resources never query a SQL warehouse;
+    # it's only for people (dashboard, Genie). The dashboard and the app may reference it.
+    import yaml
+    assert not (ROOT / "resources" / "jobpilot.alerts.yml").exists(), "SQL alerts wake the warehouse daily"
+    for wf in (ROOT / ".github" / "workflows").glob("*.yml"):
+        text = wf.read_text()
+        triggers = yaml.safe_load(text).get(True, {})
+        if isinstance(triggers, dict) and "schedule" in triggers:
+            for banned in ("export_snapshot.py", "statement_execution", "warehouses"):
+                assert banned not in text, f"{wf.name} is scheduled and uses the SQL warehouse ({banned})"
+

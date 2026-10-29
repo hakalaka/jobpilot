@@ -1,6 +1,8 @@
 name: publish-snapshot
-# 09:00 IST: export the PUBLIC market view (aggregates + public postings only) and publish to GitHub Pages.
-# Skips publishing if the latest quality gate has a failed blocking check, so a bad day never goes public.
+# Publish the PUBLIC market view (aggregates + public postings only) to GitHub Pages.
+# The data is written by the Databricks job itself (task export_public_snapshot, after the quality gate), so this
+# workflow only downloads one file: no SQL warehouse is started (it was 47% of compute when this ran queries).
+# A failed quality gate means the job never writes a new file, so a bad day is never published.
 on:
   workflow_dispatch:
   schedule:
@@ -15,14 +17,21 @@ jobs:
     env:
       DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
       DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+      SNAPSHOT: dbfs:/Volumes/workspace/jobpilot/raw/public/data.json
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with: {python-version: "3.11"}
-      - run: pip install databricks-sdk
-      - name: Export snapshot data
-        id: export
-        run: python tools/export_snapshot.py
+      - uses: databricks/setup-cli@main
+      - name: Download the snapshot written by the daily job
+        run: |
+          if ! databricks fs cp "$SNAPSHOT" site/data.json 2> err.txt; then
+            echo "::error title=No snapshot file::$(tr '\n' ' ' < err.txt) (has the daily job run since this change?)"; exit 1
+          fi
+          # Show what is being published, and warn if it's not from today (e.g. the job failed or didn't run)
+          gen=$(jq -r '.generated_at' site/data.json); open=$(jq -r '.kpis[0].open_postings' site/data.json)
+          echo "Publishing snapshot generated $gen: $open open postings" >> "$GITHUB_STEP_SUMMARY"
+          if [ "${gen:0:10}" != "$(date -u +%F)" ]; then
+            echo "::warning title=Snapshot not from today::generated $gen; publishing the last good day's data"
+          fi
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with: {path: site}

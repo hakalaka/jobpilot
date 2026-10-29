@@ -6,6 +6,7 @@
 -- retries, and data-quality metrics.
 --
 --   raw/inbox/**.jsonl  --Auto Loader-->  bronze_job_snapshots   (streaming table, append-only)
+--   raw/runs/*.jsonl    --Auto Loader-->  bronze_fetch_runs      (one audit row per board per fetch)
 --                                             |
 --                                   silver_postings_all          (one row per posting + quality flags)
 --                                     /                     \
@@ -16,7 +17,11 @@
 --
 -- No LLM calls here on purpose: enrichment is expensive, so it runs in its own task
 -- (notebooks/10_enrich_requirements.py) exactly once per posting.
--- ${landing_path} comes from the pipeline configuration in resources/jobpilot.pipeline.yml.
+-- ${landing_path} and ${runs_path} come from the pipeline configuration in resources/jobpilot.pipeline.yml.
+--
+-- INCREMENTAL FETCH: a job already fetched in full recently arrives as a 'seen' row (fetch_mode =
+-- 'seen', no description) instead of being downloaded again. Bronze keeps every row; silver takes
+-- each job's description from its latest FULL row. See src/jobpilot/incremental.py.
 -- =====================================================================================
 
 
@@ -47,8 +52,30 @@ FROM STREAM read_files(
   recursiveFileLookup => true,
   -- Explicit schema = one contract for every source; the table's shape never depends on
   -- what a single file happens to contain (inference could change types between runs).
-  schema => 'job_key STRING, source STRING, source_id STRING, company STRING, title STRING, location STRING, url STRING, raw_text STRING, posted_at STRING, ingested_at STRING, snapshot_date STRING',
+  -- list_ref and fetch_mode were added for the incremental fetch: older files simply have NULL there.
+  schema => 'job_key STRING, source STRING, source_id STRING, company STRING, title STRING, location STRING, url STRING, raw_text STRING, posted_at STRING, ingested_at STRING, snapshot_date STRING, list_ref STRING, fetch_mode STRING',
   -- Anything that doesn't fit the schema is kept here instead of being silently dropped.
+  rescuedDataColumn => '_rescued_data'
+);
+
+
+-- -------------------------------------------------------------------------------------
+-- BRONZE: fetch audit log. One row per board per daily fetch: how many postings, how many
+-- were fetched in full vs already known (detail call skipped), how long it took, any error.
+-- Its own table because it has its own shape; it lives in raw/runs, outside the postings folder.
+-- -------------------------------------------------------------------------------------
+CREATE OR REFRESH STREAMING TABLE bronze_fetch_runs
+COMMENT 'One row per career board per daily fetch: postings returned, fetched in full, already known (detail call skipped), seconds, error.'
+TBLPROPERTIES ('quality' = 'bronze')
+AS SELECT
+  *,
+  TRY_CAST(snapshot_date AS DATE) AS snapshot_day,
+  _metadata.file_path AS _source_file,
+  current_timestamp() AS _loaded_at
+FROM STREAM read_files(
+  '${runs_path}',
+  format => 'json',
+  schema => 'snapshot_date STRING, run_started_at STRING, company STRING, source STRING, postings INT, fetched_full INT, reused INT, seconds DOUBLE, error STRING',
   rescuedDataColumn => '_rescued_data'
 );
 
@@ -95,7 +122,6 @@ postings AS (
     MAX_BY(title, _loaded_at)     AS title,
     MAX_BY(location, _loaded_at)  AS location,
     MAX_BY(url, _loaded_at)       AS url,
-    MAX_BY(raw_text, _loaded_at)  AS raw_text,
     MIN(snapshot_day)             AS first_seen,
     MAX(snapshot_day)             AS last_seen,
     COUNT(DISTINCT snapshot_day)  AS days_seen,
@@ -105,6 +131,30 @@ postings AS (
     (MAX_BY(source, _loaded_at) = 'manual' OR MAX(snapshot_day) >= MAX(l.d)) AS is_open
   FROM bronze_job_snapshots CROSS JOIN latest_board_day l
   GROUP BY job_key
+),
+latest_full AS (
+  -- The description and posting date come from each job's latest FULL fetch. 'seen' rows (incremental
+  -- fetch: still open, description not downloaded again) must never overwrite the text with NULL.
+  -- Rows from before the incremental fetch have fetch_mode NULL and count as full.
+  SELECT
+    job_key,
+    MAX_BY(raw_text, _loaded_at)  AS raw_text,
+    MAX_BY(posted_at, _loaded_at) AS posted_at,
+    MAX(snapshot_day)             AS last_full_fetch
+  FROM bronze_job_snapshots
+  WHERE fetch_mode IS DISTINCT FROM 'seen'
+  GROUP BY job_key
+),
+postings_with_text AS (
+  SELECT
+    p.*,
+    f.raw_text,
+    -- The date the EMPLOYER posted the job (sources differ: '2026-10-05', '2026-10-05T07:00:00Z', ...);
+    -- first_seen is when WE first saw it. Both matter: a job first seen today may be 40 days old.
+    TRY_CAST(LEFT(f.posted_at, 10) AS DATE) AS posted_date,
+    f.last_full_fetch
+  FROM postings p
+  LEFT JOIN latest_full f ON p.job_key = f.job_key
 )
 SELECT
   *,
@@ -123,7 +173,7 @@ SELECT
     -- for this posting, but the skills in it still count, so keep it and flag it.
     CASE WHEN location IS NULL OR TRIM(location) = ''   THEN 'missing_location' END
   ), x -> x IS NOT NULL) AS dq_warnings
-FROM postings;
+FROM postings_with_text;
 
 
 -- -------------------------------------------------------------------------------------

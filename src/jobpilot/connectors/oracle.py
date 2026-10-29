@@ -13,6 +13,7 @@ import time
 import urllib.parse
 
 from .. import ats
+from ..incremental import no_state
 
 PAGE = 25
 
@@ -50,9 +51,10 @@ def parse_detail(d: dict, board: dict) -> dict:
                        url, text, posted)
 
 
-def fetch(board, title_keywords, locations, pause=0.5, get=None) -> list:
+def fetch(board, title_keywords, locations, pause=0.5, get=None, known=None) -> list:
     title_keywords = ats.title_keywords_for(board, title_keywords)
     get = get or ats._http_json
+    known = known or no_state()
     wanted, seen = [], set()
     for keyword in board.get("search_texts") or ["data engineer"]:
         loc_id = find_location_id(board, keyword, get)
@@ -73,12 +75,16 @@ def fetch(board, title_keywords, locations, pause=0.5, get=None) -> list:
         print(f"  {board['company']} '{keyword}': {total} results (location filter {loc_id or 'not found'})", flush=True)
     out = []
     for rid in wanted[: int(board.get("max_jobs", 100))]:
-        url = (f"{_api(board)}/recruitingCEJobRequisitionDetails?expand=all&onlyData=true"
-               f"&finder=ById;Id=%22{rid}%22,siteNumber={board['site']}")
-        items = get(url, None).get("items") or []
-        if items:
-            rec = parse_detail(items[0], board)
-            if ats.matches_filters(rec, title_keywords, locations):
-                out.append(rec)
-        time.sleep(pause)
+        rec = known.reuse(rid)                       # known and fresh: no detail call
+        if rec is None:
+            url = (f"{_api(board)}/recruitingCEJobRequisitionDetails?expand=all&onlyData=true"
+                   f"&finder=ById;Id=%22{rid}%22,siteNumber={board['site']}")
+            items = get(url, None).get("items") or []
+            time.sleep(pause)
+            if not items:
+                continue
+            rec = known.full(parse_detail(items[0], board), rid)
+        if ats.matches_filters(rec, title_keywords, locations):
+            out.append(rec)
+    print(f"  {board['company']}: {known.fetched} fetched in full, {known.reused} already known", flush=True)
     return out

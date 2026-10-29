@@ -49,7 +49,7 @@
       "name": "ds_apply",
       "displayName": "Open roles worth applying to",
       "queryLines": [
-        "-- One row per open APPLY / STRETCH posting, with what to highlight and what's missing.\n        -- Market data and my fit only: the private applications tracker is never read here.\n        SELECT company, title, city, ROUND(fit_score) AS fit_score,\n               CASE recommendation WHEN 'APPLY' THEN 'Apply' ELSE 'Worth a try' END AS fit_band,\n               array_join(slice(matched_skills, 1, 6), ', ') AS highlight_skills,\n               array_join(slice(missing_skills, 1, 4), ', ') AS missing_skills,\n               years_required, first_seen, days_open, url\n        FROM workspace.jobpilot.v_job_market\n        WHERE is_open AND recommendation IN ('APPLY', 'STRETCH')\n        ORDER BY recommendation, fit_score DESC, first_seen DESC"
+        "-- One row per open APPLY / STRETCH posting, with what to highlight and what's missing.\n        -- Market data and my fit only: the private applications tracker is never read here.\n        SELECT company, title, city, ROUND(fit_score) AS fit_score,\n               CASE recommendation WHEN 'APPLY' THEN 'Apply' ELSE 'Worth a try' END AS fit_band,\n               array_join(slice(matched_skills, 1, 6), ', ') AS highlight_skills,\n               array_join(slice(missing_skills, 1, 4), ', ') AS missing_skills,\n               years_required, posted_date, days_since_posted, url\n        FROM workspace.jobpilot.v_job_market\n        -- Fresh only: posted in the last 30 days (by the employer's date; first-seen date if the site gives none).\n        -- Older jobs are still counted on the page, just not suggested: they're often filled or evergreen.\n        WHERE is_open AND recommendation IN ('APPLY', 'STRETCH') AND days_since_posted <= 30\n        ORDER BY recommendation, fit_score DESC, first_seen DESC"
       ]
     },
     {
@@ -64,6 +64,20 @@
       "displayName": "Skills the matcher doesn't recognise",
       "queryLines": [
         "-- Terms the LLM extracted that aren't in the skill vocabulary (src/jobpilot/skills.py).\n        -- Each one currently counts as a gap. Real terms that keep appearing should be added there.\n        SELECT d.skill, COUNT(DISTINCT d.job_key) AS postings,\n               COUNT(DISTINCT d.job_key) FILTER (WHERE d.requirement = 'must') AS required_by\n        FROM workspace.jobpilot.gold_skill_demand d JOIN workspace.jobpilot.v_job_market m USING (job_key)\n        WHERE NOT d.known_skill AND m.is_open\n        GROUP BY d.skill ORDER BY postings DESC LIMIT 30"
+      ]
+    },
+    {
+      "name": "ds_fetch_latest",
+      "displayName": "Latest fetch run, per board",
+      "queryLines": [
+        "-- From the fetch audit log (bronze_fetch_runs): what the incremental fetch did on the latest day.\n        SELECT company, source, postings, fetched_full, reused, seconds, error\n        FROM workspace.jobpilot.bronze_fetch_runs\n        WHERE snapshot_day = (SELECT MAX(snapshot_day) FROM workspace.jobpilot.bronze_fetch_runs)"
+      ]
+    },
+    {
+      "name": "ds_fetch_days",
+      "displayName": "Fetch runs per day",
+      "queryLines": [
+        "SELECT snapshot_day, SUM(postings) AS postings, SUM(fetched_full) AS fetched_full, SUM(reused) AS reused,\n               SUM(seconds) AS seconds\n        FROM workspace.jobpilot.bronze_fetch_runs GROUP BY snapshot_day"
       ]
     },
     {
@@ -100,7 +114,7 @@
             "name": "text_19",
             "multilineTextboxSpec": {
               "lines": [
-                "Open roles scored against my profile every morning. **Apply** = fit 70+ with years and location OK; **Worth a try** = fit 50-69 or a near miss. *Highlight* = skills the posting asks for that I have: lead with these in the tailored resume. The resume table turns what open postings require into changes to make."
+                "Open roles scored against my profile every morning. **Apply** = fit 70+ with years and location OK; **Worth a try** = fit 50-69 or a near miss. *Highlight* = skills the posting asks for that I have: lead with these in the tailored resume. The resume table turns what open postings require into changes to make. Only roles posted in the last 30 days are suggested; older ones are counted but hidden."
               ]
             }
           },
@@ -190,6 +204,9 @@
                   "filters": [
                     {
                       "expression": "`is_open`"
+                    },
+                    {
+                      "expression": "`posting_age` <> 'Older (over 30 days)'"
                     }
                   ]
                 }
@@ -201,12 +218,12 @@
               "encodings": {
                 "value": {
                   "fieldName": "strong_fit_postings",
-                  "displayName": "Strong-fit roles open"
+                  "displayName": "Strong-fit roles (posted in 30 days)"
                 }
               },
               "frame": {
                 "showTitle": true,
-                "title": "Strong-fit roles open"
+                "title": "Strong-fit roles (posted in 30 days)"
               }
             }
           },
@@ -235,6 +252,9 @@
                   "filters": [
                     {
                       "expression": "`is_open`"
+                    },
+                    {
+                      "expression": "`posting_age` <> 'Older (over 30 days)'"
                     }
                   ]
                 }
@@ -246,12 +266,12 @@
               "encodings": {
                 "value": {
                   "fieldName": "stretch_postings",
-                  "displayName": "Worth-a-try roles open"
+                  "displayName": "Worth-a-try roles (posted in 30 days)"
                 }
               },
               "frame": {
                 "showTitle": true,
-                "title": "Worth-a-try roles open"
+                "title": "Worth-a-try roles (posted in 30 days)"
               }
             }
           },
@@ -280,6 +300,9 @@
                   "filters": [
                     {
                       "expression": "`is_open`"
+                    },
+                    {
+                      "expression": "`posting_age` <> 'Older (over 30 days)'"
                     }
                   ]
                 }
@@ -362,8 +385,8 @@
                   "datasetName": "mv_market",
                   "fields": [
                     {
-                      "name": "best_fit_score",
-                      "expression": "MEASURE(`best_fit_score`)"
+                      "name": "older_open_postings",
+                      "expression": "MEASURE(`older_open_postings`)"
                     }
                   ],
                   "disaggregated": false,
@@ -380,13 +403,13 @@
               "widgetType": "counter",
               "encodings": {
                 "value": {
-                  "fieldName": "best_fit_score",
-                  "displayName": "Best fit score"
+                  "fieldName": "older_open_postings",
+                  "displayName": "Older open roles, hidden (30+ days)"
                 }
               },
               "frame": {
                 "showTitle": true,
-                "title": "Best fit score"
+                "title": "Older open roles, hidden (30+ days)"
               }
             }
           },
@@ -473,6 +496,9 @@
                       "expression": "`is_open`"
                     },
                     {
+                      "expression": "`posting_age` <> 'Older (over 30 days)'"
+                    },
+                    {
                       "expression": "`recommendation` = 'APPLY'"
                     }
                   ]
@@ -503,7 +529,7 @@
               },
               "frame": {
                 "showTitle": true,
-                "title": "Companies with the most strong-fit openings"
+                "title": "Companies with the most strong-fit openings (posted in 30 days)"
               },
               "mark": {
                 "colors": [
@@ -635,8 +661,12 @@
                       "expression": "`years_required`"
                     },
                     {
-                      "name": "days_open",
-                      "expression": "`days_open`"
+                      "name": "posted_date",
+                      "expression": "`posted_date`"
+                    },
+                    {
+                      "name": "days_since_posted",
+                      "expression": "`days_since_posted`"
                     },
                     {
                       "name": "url",
@@ -685,8 +715,12 @@
                     "displayName": "Years asked"
                   },
                   {
-                    "fieldName": "days_open",
-                    "displayName": "Days on board"
+                    "fieldName": "posted_date",
+                    "displayName": "Posted"
+                  },
+                  {
+                    "fieldName": "days_since_posted",
+                    "displayName": "Days old"
                   },
                   {
                     "fieldName": "url",
@@ -2105,7 +2139,7 @@
             "name": "text_37",
             "multilineTextboxSpec": {
               "lines": [
-                "Quality gate results from the last run (blocking checks fail the job and alert by email), and rows landed in bronze per day."
+                "**Incremental fetch:** every open job is listed daily (that's how closures are detected), but a job already fetched in full in the last 7 days is not downloaded again: it lands as a *seen* row. Below: what the latest fetch skipped, per board. Then the quality gate and rows loaded."
               ]
             }
           },
@@ -2118,7 +2152,276 @@
         },
         {
           "widget": {
-            "name": "table_38",
+            "name": "kpi_38",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_fetch_latest",
+                  "fields": [
+                    {
+                      "name": "postings",
+                      "expression": "SUM(`postings`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "postings",
+                  "displayName": "Postings in the latest fetch"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Postings in the latest fetch"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 2,
+            "width": 2,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "kpi_39",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_fetch_latest",
+                  "fields": [
+                    {
+                      "name": "full",
+                      "expression": "SUM(`fetched_full`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "full",
+                  "displayName": "Fetched in full (new or due a refresh)"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Fetched in full (new or due a refresh)"
+              }
+            }
+          },
+          "position": {
+            "x": 2,
+            "y": 2,
+            "width": 2,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "kpi_40",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_fetch_latest",
+                  "fields": [
+                    {
+                      "name": "reused",
+                      "expression": "SUM(`reused`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "reused",
+                  "displayName": "Already known: detail call skipped"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Already known: detail call skipped"
+              }
+            }
+          },
+          "position": {
+            "x": 4,
+            "y": 2,
+            "width": 2,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "table_41",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_fetch_latest",
+                  "fields": [
+                    {
+                      "name": "company",
+                      "expression": "`company`"
+                    },
+                    {
+                      "name": "source",
+                      "expression": "`source`"
+                    },
+                    {
+                      "name": "postings",
+                      "expression": "`postings`"
+                    },
+                    {
+                      "name": "fetched_full",
+                      "expression": "`fetched_full`"
+                    },
+                    {
+                      "name": "reused",
+                      "expression": "`reused`"
+                    },
+                    {
+                      "name": "seconds",
+                      "expression": "`seconds`"
+                    },
+                    {
+                      "name": "error",
+                      "expression": "`error`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "company",
+                    "displayName": "Board"
+                  },
+                  {
+                    "fieldName": "source",
+                    "displayName": "Platform"
+                  },
+                  {
+                    "fieldName": "postings",
+                    "displayName": "Postings"
+                  },
+                  {
+                    "fieldName": "fetched_full",
+                    "displayName": "Fetched in full"
+                  },
+                  {
+                    "fieldName": "reused",
+                    "displayName": "Already known"
+                  },
+                  {
+                    "fieldName": "seconds",
+                    "displayName": "Seconds"
+                  },
+                  {
+                    "fieldName": "error",
+                    "displayName": "Error"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Latest fetch, per board"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 4,
+            "width": 4,
+            "height": 7
+          }
+        },
+        {
+          "widget": {
+            "name": "line_42",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_fetch_days",
+                  "fields": [
+                    {
+                      "name": "snapshot_day",
+                      "expression": "`snapshot_day`"
+                    },
+                    {
+                      "name": "reused",
+                      "expression": "SUM(`reused`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "line",
+              "encodings": {
+                "x": {
+                  "fieldName": "snapshot_day",
+                  "displayName": "Day",
+                  "scale": {
+                    "type": "temporal"
+                  }
+                },
+                "y": {
+                  "fieldName": "reused",
+                  "displayName": "Already known",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                }
+              },
+              "mark": {
+                "colors": [
+                  "#2a78d6"
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Detail calls skipped per day"
+              }
+            }
+          },
+          "position": {
+            "x": 4,
+            "y": 4,
+            "width": 2,
+            "height": 7
+          }
+        },
+        {
+          "widget": {
+            "name": "table_43",
             "queries": [
               {
                 "name": "main_query",
@@ -2201,14 +2504,14 @@
           },
           "position": {
             "x": 0,
-            "y": 2,
+            "y": 24,
             "width": 6,
             "height": 5
           }
         },
         {
           "widget": {
-            "name": "line_39",
+            "name": "line_44",
             "queries": [
               {
                 "name": "main_query",
@@ -2260,14 +2563,14 @@
           },
           "position": {
             "x": 0,
-            "y": 7,
+            "y": 29,
             "width": 6,
             "height": 4
           }
         },
         {
           "widget": {
-            "name": "bar_40",
+            "name": "bar_45",
             "queries": [
               {
                 "name": "main_query",
@@ -2334,7 +2637,7 @@
         },
         {
           "widget": {
-            "name": "bar_41",
+            "name": "bar_46",
             "queries": [
               {
                 "name": "main_query",
@@ -2401,7 +2704,7 @@
         },
         {
           "widget": {
-            "name": "text_42",
+            "name": "text_47",
             "multilineTextboxSpec": {
               "lines": [
                 "Skills the matcher doesn't recognise. Each counts as a gap in the fit score today. If a term is real (a tool or a synonym), add it to `src/jobpilot/skills.py` and push."
@@ -2417,7 +2720,7 @@
         },
         {
           "widget": {
-            "name": "table_43",
+            "name": "table_48",
             "queries": [
               {
                 "name": "main_query",

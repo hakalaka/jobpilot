@@ -1,4 +1,8 @@
-"""Export the PUBLIC market view to site/data.json for the GitHub Pages snapshot.
+"""MANUAL export of the public snapshot through a SQL warehouse (e.g. from a laptop).
+
+The daily path doesn't use this: task export_public_snapshot (notebooks/60) writes the same file inside the
+Databricks job, so no automated step wakes the SQL warehouse. Queries live in src/jobpilot/public_snapshot.py.
+Export the PUBLIC market view to site/data.json for the GitHub Pages snapshot.
 
 Only aggregate market data and public job postings leave the workspace. Nothing from the private
 `applications` tracker or the master profile's contact details is ever queried here.
@@ -10,70 +14,19 @@ import json
 import os
 import sys
 import time
-from datetime import datetime, timezone
 from pathlib import Path
 
 from databricks.sdk import WorkspaceClient
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+from jobpilot.public_snapshot import payload, queries  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
 T = os.getenv("JOBPILOT_TABLE_PREFIX", "workspace.jobpilot")
 WAREHOUSE_NAME = os.getenv("JOBPILOT_WAREHOUSE", "Serverless Starter Warehouse")
 
-QUERIES = {
-    "quality": f"""
-        SELECT COUNT_IF(blocking AND NOT passed) AS failed_blocking, MAX(checked_at) AS last_check
-        FROM (SELECT *, ROW_NUMBER() OVER (PARTITION BY check_name ORDER BY checked_at DESC) AS rn
-              FROM {T}.ops_quality_log) WHERE rn = 1""",
-    # Headline numbers come from the metric views (notebooks/30_semantic_layer.py), so the public page,
-    # the dashboard and Genie can't disagree. MEASURE(x) = "compute measure x for this grouping".
-    "kpis": f"""
-        SELECT k.*, x.as_of, x.largest_company
-        FROM (SELECT MEASURE(open_postings) AS open_postings,
-                     MEASURE(companies) AS companies,
-                     MEASURE(median_years_required) AS median_years,
-                     MEASURE(strong_fit_rate) AS strong_fit_share,
-                     MEASURE(enrichment_coverage) AS enrichment_coverage,
-                     MEASURE(largest_company_share) AS largest_company_share
-              FROM {T}.mv_job_market WHERE is_open) k
-        -- Two plain facts (not metrics) for the page's caption: data date and the dominant employer.
-        CROSS JOIN (SELECT MAX(last_seen) AS as_of,
-                           MAX(CASE WHEN from_largest_company THEN company END) AS largest_company
-                    FROM {T}.v_job_market) x""",
-    "skill_flags": f"""
-        SELECT AVG(wants_databricks) AS databricks_share, AVG(wants_genai) AS genai_share FROM (
-          SELECT m.job_key,
-                 MAX(CASE WHEN d.skill = 'databricks' THEN 1.0 ELSE 0.0 END) AS wants_databricks,
-                 MAX(CASE WHEN d.skill IN ('genie', 'llm', 'generative ai') THEN 1.0 ELSE 0.0 END) AS wants_genai
-          FROM {T}.v_job_market m LEFT JOIN {T}.gold_skill_demand d USING (job_key)
-          -- Enriched only: skills come from the LLM, so an unread posting would count as "doesn't ask".
-          WHERE m.is_open AND m.is_enriched GROUP BY m.job_key)""",
-    "daily": f"""
-        SELECT day, MEASURE(avg_open_postings) AS open_postings, MEASURE(new_postings) AS new_postings
-        FROM {T}.mv_market_daily
-        WHERE day >= date_sub(current_date(), 120)
-        GROUP BY day ORDER BY day""",
-    "skills": f"""
-        SELECT skill, skill_status AS status, MEASURE(must_have_postings) AS postings
-        FROM {T}.mv_skill_demand
-        WHERE is_open
-        GROUP BY skill, skill_status ORDER BY postings DESC LIMIT 20""",
-    "cities": f"""
-        SELECT city, MEASURE(open_postings) AS postings FROM {T}.mv_job_market
-        WHERE is_open GROUP BY city ORDER BY postings DESC""",
-    "domains": f"""
-        SELECT COALESCE(NULLIF(domain, ''), 'unspecified') AS domain, MEASURE(open_postings) AS postings
-        FROM {T}.mv_job_market WHERE is_open AND is_enriched AND domain <> 'Not stated'
-        GROUP BY 1 ORDER BY postings DESC LIMIT 10""",
-    "sources": f"""
-        SELECT source_platform AS platform, MEASURE(open_postings) AS postings, MEASURE(companies) AS companies
-        FROM {T}.mv_job_market WHERE is_open AND source <> 'manual'
-        GROUP BY source_platform ORDER BY postings DESC""",
-    # Row-level lists (not metrics) still read the commented view directly.
-    "roles": f"""
-        SELECT company, title, city, ROUND(fit_score) AS fit_score, recommendation, url
-        FROM {T}.v_job_market WHERE is_open AND recommendation <> 'SKIP'
-        ORDER BY fit_score DESC, first_seen DESC LIMIT 15""",
-}
+QUERIES = queries(T)
+
 
 
 def run(w: WorkspaceClient, warehouse_id: str, sql: str) -> list:
@@ -104,12 +57,7 @@ def main() -> int:
     if wh is None:
         print(f"::error::warehouse '{WAREHOUSE_NAME}' not found")
         return 1
-    data = {name: run(w, wh.id, q) for name, q in QUERIES.items()}
-    failed = int(data["quality"][0]["failed_blocking"] or 0) if data["quality"] else 0
-    if failed:
-        print(f"::error::Not publishing: {failed} blocking quality check(s) failed in the latest run.")
-        return 2
-    data["generated_at"] = datetime.now(timezone.utc).isoformat(timespec="minutes")
+    data = payload({name: run(w, wh.id, q) for name, q in QUERIES.items()})
     out = ROOT / "site" / "data.json"
     out.write_text(json.dumps(data, indent=1))
     print(f"wrote {out}: {data['kpis'][0]['open_postings']} open postings")
